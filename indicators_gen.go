@@ -3,12 +3,14 @@
 package wickra
 
 /*
+#include <stdlib.h>
 #include "wickra.h"
 */
 import "C"
 
 import (
 	"runtime"
+	"time"
 	"unsafe"
 )
 
@@ -100,6 +102,16 @@ type CamarillaPivotsOutput struct {
 	S2 float64
 	S3 float64
 	S4 float64
+}
+
+// Candle is the output of the Candle indicator.
+type Candle struct {
+	Open      float64
+	High      float64
+	Low       float64
+	Close     float64
+	Volume    float64
+	Timestamp int64
 }
 
 // CandleVolumeOutput is the output of the CandleVolume indicator.
@@ -791,6 +803,13 @@ func (ind *AbandonedBaby) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AbandonedBaby) Name() string {
+	r := C.GoString(C.wickra_abandoned_baby_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AbandonedBaby) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -878,6 +897,13 @@ func (ind *Abcd) WarmupPeriod() int {
 // emit a value.
 func (ind *Abcd) IsReady() bool {
 	r := bool(C.wickra_abcd_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Abcd) Name() string {
+	r := C.GoString(C.wickra_abcd_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -973,6 +999,13 @@ func (ind *AbsoluteBreadthIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AbsoluteBreadthIndex) Name() string {
+	r := C.GoString(C.wickra_absolute_breadth_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *AbsoluteBreadthIndex) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -1051,6 +1084,13 @@ func (ind *AccelerationBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AccelerationBands) Name() string {
+	r := C.GoString(C.wickra_acceleration_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *AccelerationBands) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AccelerationBandsOutput, bool) {
@@ -1108,6 +1148,13 @@ func (ind *AcceleratorOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *AcceleratorOscillator) IsReady() bool {
 	r := bool(C.wickra_accelerator_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AcceleratorOscillator) Name() string {
+	r := C.GoString(C.wickra_accelerator_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -1203,6 +1250,13 @@ func (ind *AdOscillator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AdOscillator) Name() string {
+	r := C.GoString(C.wickra_ad_oscillator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AdOscillator) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -1294,6 +1348,13 @@ func (ind *AdVolumeLine) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AdVolumeLine) Name() string {
+	r := C.GoString(C.wickra_ad_volume_line_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *AdVolumeLine) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -1368,6 +1429,13 @@ func (ind *AdaptiveCci) WarmupPeriod() int {
 // emit a value.
 func (ind *AdaptiveCci) IsReady() bool {
 	r := bool(C.wickra_adaptive_cci_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AdaptiveCci) Name() string {
+	r := C.GoString(C.wickra_adaptive_cci_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -1463,6 +1531,13 @@ func (ind *AdaptiveCycle) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AdaptiveCycle) Name() string {
+	r := C.GoString(C.wickra_adaptive_cycle_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AdaptiveCycle) Update(value float64) float64 {
@@ -1530,6 +1605,13 @@ func (ind *AdaptiveLaguerreFilter) WarmupPeriod() int {
 // emit a value.
 func (ind *AdaptiveLaguerreFilter) IsReady() bool {
 	r := bool(C.wickra_adaptive_laguerre_filter_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AdaptiveLaguerreFilter) Name() string {
+	r := C.GoString(C.wickra_adaptive_laguerre_filter_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -1605,6 +1687,13 @@ func (ind *AdaptiveRsi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AdaptiveRsi) Name() string {
+	r := C.GoString(C.wickra_adaptive_rsi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AdaptiveRsi) Update(value float64) float64 {
@@ -1672,6 +1761,13 @@ func (ind *Adl) WarmupPeriod() int {
 // emit a value.
 func (ind *Adl) IsReady() bool {
 	r := bool(C.wickra_adl_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Adl) Name() string {
+	r := C.GoString(C.wickra_adl_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -1767,6 +1863,13 @@ func (ind *AdvanceBlock) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AdvanceBlock) Name() string {
+	r := C.GoString(C.wickra_advance_block_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AdvanceBlock) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -1858,6 +1961,13 @@ func (ind *AdvanceDecline) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AdvanceDecline) Name() string {
+	r := C.GoString(C.wickra_advance_decline_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *AdvanceDecline) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -1932,6 +2042,13 @@ func (ind *AdvanceDeclineRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *AdvanceDeclineRatio) IsReady() bool {
 	r := bool(C.wickra_advance_decline_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AdvanceDeclineRatio) Name() string {
+	r := C.GoString(C.wickra_advance_decline_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2014,6 +2131,13 @@ func (ind *Adx) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Adx) Name() string {
+	r := C.GoString(C.wickra_adx_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Adx) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AdxOutput, bool) {
@@ -2071,6 +2195,13 @@ func (ind *Adxr) WarmupPeriod() int {
 // emit a value.
 func (ind *Adxr) IsReady() bool {
 	r := bool(C.wickra_adxr_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Adxr) Name() string {
+	r := C.GoString(C.wickra_adxr_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2166,6 +2297,13 @@ func (ind *Alligator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Alligator) Name() string {
+	r := C.GoString(C.wickra_alligator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Alligator) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AlligatorOutput, bool) {
@@ -2223,6 +2361,13 @@ func (ind *Alma) WarmupPeriod() int {
 // emit a value.
 func (ind *Alma) IsReady() bool {
 	r := bool(C.wickra_alma_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Alma) Name() string {
+	r := C.GoString(C.wickra_alma_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2294,6 +2439,13 @@ func (ind *Alpha) WarmupPeriod() int {
 // emit a value.
 func (ind *Alpha) IsReady() bool {
 	r := bool(C.wickra_alpha_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Alpha) Name() string {
+	r := C.GoString(C.wickra_alpha_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2373,6 +2525,13 @@ func (ind *AmihudIlliquidity) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AmihudIlliquidity) Name() string {
+	r := C.GoString(C.wickra_amihud_illiquidity_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AmihudIlliquidity) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -2426,6 +2585,13 @@ func (ind *AnchoredRsi) WarmupPeriod() int {
 // emit a value.
 func (ind *AnchoredRsi) IsReady() bool {
 	r := bool(C.wickra_anchored_rsi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AnchoredRsi) Name() string {
+	r := C.GoString(C.wickra_anchored_rsi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2497,6 +2663,13 @@ func (ind *AnchoredVwap) WarmupPeriod() int {
 // emit a value.
 func (ind *AnchoredVwap) IsReady() bool {
 	r := bool(C.wickra_anchored_vwap_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AnchoredVwap) Name() string {
+	r := C.GoString(C.wickra_anchored_vwap_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2592,6 +2765,13 @@ func (ind *AndrewsPitchfork) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AndrewsPitchfork) Name() string {
+	r := C.GoString(C.wickra_andrews_pitchfork_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *AndrewsPitchfork) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AndrewsPitchforkOutput, bool) {
@@ -2649,6 +2829,13 @@ func (ind *Apo) WarmupPeriod() int {
 // emit a value.
 func (ind *Apo) IsReady() bool {
 	r := bool(C.wickra_apo_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Apo) Name() string {
+	r := C.GoString(C.wickra_apo_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2724,6 +2911,13 @@ func (ind *Aroon) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Aroon) Name() string {
+	r := C.GoString(C.wickra_aroon_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Aroon) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AroonOutput, bool) {
@@ -2781,6 +2975,13 @@ func (ind *AroonOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *AroonOscillator) IsReady() bool {
 	r := bool(C.wickra_aroon_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AroonOscillator) Name() string {
+	r := C.GoString(C.wickra_aroon_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -2876,6 +3077,13 @@ func (ind *Atr) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Atr) Name() string {
+	r := C.GoString(C.wickra_atr_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Atr) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -2967,6 +3175,13 @@ func (ind *AtrBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AtrBands) Name() string {
+	r := C.GoString(C.wickra_atr_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *AtrBands) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AtrBandsOutput, bool) {
@@ -3028,6 +3243,13 @@ func (ind *AtrRatchet) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AtrRatchet) Name() string {
+	r := C.GoString(C.wickra_atr_ratchet_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *AtrRatchet) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AtrRatchetOutput, bool) {
@@ -3085,6 +3307,13 @@ func (ind *AtrTrailingStop) WarmupPeriod() int {
 // emit a value.
 func (ind *AtrTrailingStop) IsReady() bool {
 	r := bool(C.wickra_atr_trailing_stop_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AtrTrailingStop) Name() string {
+	r := C.GoString(C.wickra_atr_trailing_stop_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -3180,6 +3409,13 @@ func (ind *AutoFib) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AutoFib) Name() string {
+	r := C.GoString(C.wickra_auto_fib_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *AutoFib) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (AutoFibOutput, bool) {
@@ -3237,6 +3473,13 @@ func (ind *Autocorrelation) WarmupPeriod() int {
 // emit a value.
 func (ind *Autocorrelation) IsReady() bool {
 	r := bool(C.wickra_autocorrelation_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Autocorrelation) Name() string {
+	r := C.GoString(C.wickra_autocorrelation_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -3312,6 +3555,13 @@ func (ind *AutocorrelationPeriodogram) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AutocorrelationPeriodogram) Name() string {
+	r := C.GoString(C.wickra_autocorrelation_periodogram_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AutocorrelationPeriodogram) Update(value float64) float64 {
@@ -3379,6 +3629,13 @@ func (ind *AverageDailyRange) WarmupPeriod() int {
 // emit a value.
 func (ind *AverageDailyRange) IsReady() bool {
 	r := bool(C.wickra_average_daily_range_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AverageDailyRange) Name() string {
+	r := C.GoString(C.wickra_average_daily_range_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -3474,6 +3731,13 @@ func (ind *AverageDrawdown) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AverageDrawdown) Name() string {
+	r := C.GoString(C.wickra_average_drawdown_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AverageDrawdown) Update(value float64) float64 {
@@ -3541,6 +3805,13 @@ func (ind *AvgPrice) WarmupPeriod() int {
 // emit a value.
 func (ind *AvgPrice) IsReady() bool {
 	r := bool(C.wickra_avg_price_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AvgPrice) Name() string {
+	r := C.GoString(C.wickra_avg_price_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -3636,6 +3907,13 @@ func (ind *AwesomeOscillator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *AwesomeOscillator) Name() string {
+	r := C.GoString(C.wickra_awesome_oscillator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *AwesomeOscillator) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -3701,8 +3979,8 @@ type AwesomeOscillatorHistogram struct {
 
 // NewAwesomeOscillatorHistogram constructs a AwesomeOscillatorHistogram. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
-func NewAwesomeOscillatorHistogram(fast int, slow int, smaPeriod int) (*AwesomeOscillatorHistogram, error) {
-	ptr := C.wickra_awesome_oscillator_histogram_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(smaPeriod))
+func NewAwesomeOscillatorHistogram(fast int, slow int, lookback int) (*AwesomeOscillatorHistogram, error) {
+	ptr := C.wickra_awesome_oscillator_histogram_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(lookback))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
@@ -3723,6 +4001,13 @@ func (ind *AwesomeOscillatorHistogram) WarmupPeriod() int {
 // emit a value.
 func (ind *AwesomeOscillatorHistogram) IsReady() bool {
 	r := bool(C.wickra_awesome_oscillator_histogram_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *AwesomeOscillatorHistogram) Name() string {
+	r := C.GoString(C.wickra_awesome_oscillator_histogram_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -3818,6 +4103,13 @@ func (ind *BalanceOfPower) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BalanceOfPower) Name() string {
+	r := C.GoString(C.wickra_balance_of_power_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *BalanceOfPower) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -3909,6 +4201,13 @@ func (ind *BandpassFilter) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BandpassFilter) Name() string {
+	r := C.GoString(C.wickra_bandpass_filter_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *BandpassFilter) Update(value float64) float64 {
@@ -3976,6 +4275,13 @@ func (ind *Bat) WarmupPeriod() int {
 // emit a value.
 func (ind *Bat) IsReady() bool {
 	r := bool(C.wickra_bat_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Bat) Name() string {
+	r := C.GoString(C.wickra_bat_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -4071,6 +4377,13 @@ func (ind *BeltHold) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BeltHold) Name() string {
+	r := C.GoString(C.wickra_belt_hold_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *BeltHold) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -4162,6 +4475,13 @@ func (ind *Beta) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Beta) Name() string {
+	r := C.GoString(C.wickra_beta_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Beta) Update(x float64, y float64) float64 {
@@ -4237,6 +4557,13 @@ func (ind *BetaNeutralSpread) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BetaNeutralSpread) Name() string {
+	r := C.GoString(C.wickra_beta_neutral_spread_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *BetaNeutralSpread) Update(x float64, y float64) float64 {
@@ -4308,6 +4635,13 @@ func (ind *BetterVolume) WarmupPeriod() int {
 // emit a value.
 func (ind *BetterVolume) IsReady() bool {
 	r := bool(C.wickra_better_volume_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *BetterVolume) Name() string {
+	r := C.GoString(C.wickra_better_volume_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -4403,6 +4737,13 @@ func (ind *BipowerVariation) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BipowerVariation) Name() string {
+	r := C.GoString(C.wickra_bipower_variation_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *BipowerVariation) Update(value float64) float64 {
@@ -4470,6 +4811,13 @@ func (ind *BodySizePct) WarmupPeriod() int {
 // emit a value.
 func (ind *BodySizePct) IsReady() bool {
 	r := bool(C.wickra_body_size_pct_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *BodySizePct) Name() string {
+	r := C.GoString(C.wickra_body_size_pct_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -4565,6 +4913,13 @@ func (ind *BollingerBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BollingerBands) Name() string {
+	r := C.GoString(C.wickra_bollinger_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *BollingerBands) Update(value float64) (BollingerOutput, bool) {
@@ -4622,6 +4977,13 @@ func (ind *BollingerBandwidth) WarmupPeriod() int {
 // emit a value.
 func (ind *BollingerBandwidth) IsReady() bool {
 	r := bool(C.wickra_bollinger_bandwidth_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *BollingerBandwidth) Name() string {
+	r := C.GoString(C.wickra_bollinger_bandwidth_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -4697,6 +5059,13 @@ func (ind *BomarBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BomarBands) Name() string {
+	r := C.GoString(C.wickra_bomar_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *BomarBands) Update(value float64) (BomarBandsOutput, bool) {
@@ -4754,6 +5123,13 @@ func (ind *BreadthThrust) WarmupPeriod() int {
 // emit a value.
 func (ind *BreadthThrust) IsReady() bool {
 	r := bool(C.wickra_breadth_thrust_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *BreadthThrust) Name() string {
+	r := C.GoString(C.wickra_breadth_thrust_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -4832,6 +5208,13 @@ func (ind *Breakaway) WarmupPeriod() int {
 // emit a value.
 func (ind *Breakaway) IsReady() bool {
 	r := bool(C.wickra_breakaway_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Breakaway) Name() string {
+	r := C.GoString(C.wickra_breakaway_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -4927,6 +5310,13 @@ func (ind *BullishPercentIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BullishPercentIndex) Name() string {
+	r := C.GoString(C.wickra_bullish_percent_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *BullishPercentIndex) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -5005,6 +5395,13 @@ func (ind *BurkeRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *BurkeRatio) Name() string {
+	r := C.GoString(C.wickra_burke_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *BurkeRatio) Update(value float64) float64 {
@@ -5072,6 +5469,13 @@ func (ind *Butterfly) WarmupPeriod() int {
 // emit a value.
 func (ind *Butterfly) IsReady() bool {
 	r := bool(C.wickra_butterfly_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Butterfly) Name() string {
+	r := C.GoString(C.wickra_butterfly_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5167,6 +5571,13 @@ func (ind *CalendarSpread) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CalendarSpread) Name() string {
+	r := C.GoString(C.wickra_calendar_spread_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *CalendarSpread) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -5220,6 +5631,13 @@ func (ind *CalmarRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *CalmarRatio) IsReady() bool {
 	r := bool(C.wickra_calmar_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CalmarRatio) Name() string {
+	r := C.GoString(C.wickra_calmar_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5295,6 +5713,13 @@ func (ind *Camarilla) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Camarilla) Name() string {
+	r := C.GoString(C.wickra_camarilla_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Camarilla) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (CamarillaPivotsOutput, bool) {
@@ -5318,6 +5743,57 @@ func (ind *Camarilla) Reset() {
 func (ind *Camarilla) Close() {
 	if ind.handle != nil {
 		C.wickra_camarilla_free(ind.handle)
+		ind.handle = nil
+		runtime.SetFinalizer(ind, nil)
+	}
+}
+
+// CandleReader parses an OHLCV CSV buffer into candles over the Wickra C ABI.
+type CandleReader struct {
+	handle *C.struct_CandleReader
+}
+
+// NewCandleReader parses a timestamp,open,high,low,close,volume CSV string (a
+// leading UTF-8 BOM and field whitespace are tolerated). It returns
+// ErrInvalidParams when the header or a row is malformed.
+func NewCandleReader(csv string) (*CandleReader, error) {
+	data := []byte(csv)
+	var ptr *C.struct_CandleReader
+	if len(data) == 0 {
+		ptr = C.wickra_candle_reader_new(nil, 0)
+	} else {
+		ptr = C.wickra_candle_reader_new((*C.uint8_t)(unsafe.Pointer(&data[0])), C.uintptr_t(len(data)))
+	}
+	if ptr == nil {
+		return nil, ErrInvalidParams
+	}
+	obj := &CandleReader{handle: ptr}
+	runtime.SetFinalizer(obj, (*CandleReader).Close)
+	return obj, nil
+}
+
+// Read returns every candle parsed from the CSV, in file order.
+func (ind *CandleReader) Read() []Candle {
+	n := int(C.wickra_candle_reader_count(ind.handle))
+	runtime.KeepAlive(ind)
+	if n <= 0 {
+		return nil
+	}
+	buf := make([]C.struct_WickraCandle, n)
+	C.wickra_candle_reader_read(ind.handle, &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	out := make([]Candle, n)
+	for i := 0; i < n; i++ {
+		out[i] = Candle{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume), int64(buf[i].timestamp)}
+	}
+	return out
+}
+
+// Close frees the native handle. It is idempotent and safe to call
+// alongside the finalizer.
+func (ind *CandleReader) Close() {
+	if ind.handle != nil {
+		C.wickra_candle_reader_free(ind.handle)
 		ind.handle = nil
 		runtime.SetFinalizer(ind, nil)
 	}
@@ -5352,6 +5828,13 @@ func (ind *CandleVolume) WarmupPeriod() int {
 // emit a value.
 func (ind *CandleVolume) IsReady() bool {
 	r := bool(C.wickra_candle_volume_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CandleVolume) Name() string {
+	r := C.GoString(C.wickra_candle_volume_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5413,6 +5896,13 @@ func (ind *Cci) WarmupPeriod() int {
 // emit a value.
 func (ind *Cci) IsReady() bool {
 	r := bool(C.wickra_cci_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Cci) Name() string {
+	r := C.GoString(C.wickra_cci_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5508,6 +5998,13 @@ func (ind *CenterOfGravity) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CenterOfGravity) Name() string {
+	r := C.GoString(C.wickra_center_of_gravity_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *CenterOfGravity) Update(value float64) float64 {
@@ -5579,6 +6076,13 @@ func (ind *CentralPivotRange) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CentralPivotRange) Name() string {
+	r := C.GoString(C.wickra_central_pivot_range_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *CentralPivotRange) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (CentralPivotRangeOutput, bool) {
@@ -5636,6 +6140,13 @@ func (ind *Cfo) WarmupPeriod() int {
 // emit a value.
 func (ind *Cfo) IsReady() bool {
 	r := bool(C.wickra_cfo_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Cfo) Name() string {
+	r := C.GoString(C.wickra_cfo_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5707,6 +6218,13 @@ func (ind *ChaikinMoneyFlow) WarmupPeriod() int {
 // emit a value.
 func (ind *ChaikinMoneyFlow) IsReady() bool {
 	r := bool(C.wickra_chaikin_money_flow_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ChaikinMoneyFlow) Name() string {
+	r := C.GoString(C.wickra_chaikin_money_flow_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5802,6 +6320,13 @@ func (ind *ChaikinOscillator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ChaikinOscillator) Name() string {
+	r := C.GoString(C.wickra_chaikin_oscillator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ChaikinOscillator) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -5889,6 +6414,13 @@ func (ind *ChaikinVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *ChaikinVolatility) IsReady() bool {
 	r := bool(C.wickra_chaikin_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ChaikinVolatility) Name() string {
+	r := C.GoString(C.wickra_chaikin_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -5984,6 +6516,13 @@ func (ind *ChandeKrollStop) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ChandeKrollStop) Name() string {
+	r := C.GoString(C.wickra_chande_kroll_stop_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ChandeKrollStop) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ChandeKrollStopOutput, bool) {
@@ -6045,6 +6584,13 @@ func (ind *ChandelierExit) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ChandelierExit) Name() string {
+	r := C.GoString(C.wickra_chandelier_exit_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ChandelierExit) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ChandelierExitOutput, bool) {
@@ -6102,6 +6648,13 @@ func (ind *ChoppinessIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *ChoppinessIndex) IsReady() bool {
 	r := bool(C.wickra_choppiness_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ChoppinessIndex) Name() string {
+	r := C.GoString(C.wickra_choppiness_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -6197,6 +6750,13 @@ func (ind *ClassicPivots) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ClassicPivots) Name() string {
+	r := C.GoString(C.wickra_classic_pivots_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ClassicPivots) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ClassicPivotsOutput, bool) {
@@ -6254,6 +6814,13 @@ func (ind *CloseVsOpen) WarmupPeriod() int {
 // emit a value.
 func (ind *CloseVsOpen) IsReady() bool {
 	r := bool(C.wickra_close_vs_open_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CloseVsOpen) Name() string {
+	r := C.GoString(C.wickra_close_vs_open_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -6349,6 +6916,13 @@ func (ind *ClosingMarubozu) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ClosingMarubozu) Name() string {
+	r := C.GoString(C.wickra_closing_marubozu_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ClosingMarubozu) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -6440,6 +7014,13 @@ func (ind *Cmo) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Cmo) Name() string {
+	r := C.GoString(C.wickra_cmo_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Cmo) Update(value float64) float64 {
@@ -6507,6 +7088,13 @@ func (ind *CoefficientOfVariation) WarmupPeriod() int {
 // emit a value.
 func (ind *CoefficientOfVariation) IsReady() bool {
 	r := bool(C.wickra_coefficient_of_variation_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CoefficientOfVariation) Name() string {
+	r := C.GoString(C.wickra_coefficient_of_variation_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -6582,6 +7170,13 @@ func (ind *Cointegration) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Cointegration) Name() string {
+	r := C.GoString(C.wickra_cointegration_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Cointegration) Update(x float64, y float64) (CointegrationOutput, bool) {
@@ -6639,6 +7234,13 @@ func (ind *CommonSenseRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *CommonSenseRatio) IsReady() bool {
 	r := bool(C.wickra_common_sense_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CommonSenseRatio) Name() string {
+	r := C.GoString(C.wickra_common_sense_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -6714,6 +7316,13 @@ func (ind *CompositeProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CompositeProfile) Name() string {
+	r := C.GoString(C.wickra_composite_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *CompositeProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (CompositeProfileOutput, bool) {
@@ -6771,6 +7380,13 @@ func (ind *ConcealingBabySwallow) WarmupPeriod() int {
 // emit a value.
 func (ind *ConcealingBabySwallow) IsReady() bool {
 	r := bool(C.wickra_concealing_baby_swallow_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ConcealingBabySwallow) Name() string {
+	r := C.GoString(C.wickra_concealing_baby_swallow_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -6866,6 +7482,13 @@ func (ind *ConditionalValueAtRisk) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ConditionalValueAtRisk) Name() string {
+	r := C.GoString(C.wickra_conditional_value_at_risk_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ConditionalValueAtRisk) Update(value float64) float64 {
@@ -6933,6 +7556,13 @@ func (ind *ConnorsRsi) WarmupPeriod() int {
 // emit a value.
 func (ind *ConnorsRsi) IsReady() bool {
 	r := bool(C.wickra_connors_rsi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ConnorsRsi) Name() string {
+	r := C.GoString(C.wickra_connors_rsi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -7008,6 +7638,13 @@ func (ind *Coppock) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Coppock) Name() string {
+	r := C.GoString(C.wickra_coppock_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Coppock) Update(value float64) float64 {
@@ -7079,6 +7716,13 @@ func (ind *CorrelationTrendIndicator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CorrelationTrendIndicator) Name() string {
+	r := C.GoString(C.wickra_correlation_trend_indicator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *CorrelationTrendIndicator) Update(value float64) float64 {
@@ -7146,6 +7790,13 @@ func (ind *Counterattack) WarmupPeriod() int {
 // emit a value.
 func (ind *Counterattack) IsReady() bool {
 	r := bool(C.wickra_counterattack_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Counterattack) Name() string {
+	r := C.GoString(C.wickra_counterattack_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -7241,6 +7892,13 @@ func (ind *Crab) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Crab) Name() string {
+	r := C.GoString(C.wickra_crab_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Crab) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -7332,6 +7990,13 @@ func (ind *CumulativeVolumeDelta) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CumulativeVolumeDelta) Name() string {
+	r := C.GoString(C.wickra_cumulative_volume_delta_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *CumulativeVolumeDelta) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -7385,6 +8050,13 @@ func (ind *CumulativeVolumeIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *CumulativeVolumeIndex) IsReady() bool {
 	r := bool(C.wickra_cumulative_volume_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CumulativeVolumeIndex) Name() string {
+	r := C.GoString(C.wickra_cumulative_volume_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -7463,6 +8135,13 @@ func (ind *CupAndHandle) WarmupPeriod() int {
 // emit a value.
 func (ind *CupAndHandle) IsReady() bool {
 	r := bool(C.wickra_cup_and_handle_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *CupAndHandle) Name() string {
+	r := C.GoString(C.wickra_cup_and_handle_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -7558,6 +8237,13 @@ func (ind *CyberneticCycle) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *CyberneticCycle) Name() string {
+	r := C.GoString(C.wickra_cybernetic_cycle_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *CyberneticCycle) Update(value float64) float64 {
@@ -7625,6 +8311,13 @@ func (ind *Cypher) WarmupPeriod() int {
 // emit a value.
 func (ind *Cypher) IsReady() bool {
 	r := bool(C.wickra_cypher_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Cypher) Name() string {
+	r := C.GoString(C.wickra_cypher_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -7722,6 +8415,13 @@ func (ind *DayOfWeekProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DayOfWeekProfile) Name() string {
+	r := C.GoString(C.wickra_day_of_week_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the profile values
 // (ok is false during warmup).
 func (ind *DayOfWeekProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) ([]float64, bool) {
@@ -7779,6 +8479,13 @@ func (ind *Decycler) WarmupPeriod() int {
 // emit a value.
 func (ind *Decycler) IsReady() bool {
 	r := bool(C.wickra_decycler_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Decycler) Name() string {
+	r := C.GoString(C.wickra_decycler_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -7854,6 +8561,13 @@ func (ind *DecyclerOscillator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DecyclerOscillator) Name() string {
+	r := C.GoString(C.wickra_decycler_oscillator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DecyclerOscillator) Update(value float64) float64 {
@@ -7925,6 +8639,13 @@ func (ind *Dema) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Dema) Name() string {
+	r := C.GoString(C.wickra_dema_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Dema) Update(value float64) float64 {
@@ -7992,6 +8713,13 @@ func (ind *DemandIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *DemandIndex) IsReady() bool {
 	r := bool(C.wickra_demand_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DemandIndex) Name() string {
+	r := C.GoString(C.wickra_demand_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -8087,6 +8815,13 @@ func (ind *DemarkPivots) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DemarkPivots) Name() string {
+	r := C.GoString(C.wickra_demark_pivots_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *DemarkPivots) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (DemarkPivotsOutput, bool) {
@@ -8144,6 +8879,13 @@ func (ind *DepthSlope) WarmupPeriod() int {
 // emit a value.
 func (ind *DepthSlope) IsReady() bool {
 	r := bool(C.wickra_depth_slope_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DepthSlope) Name() string {
+	r := C.GoString(C.wickra_depth_slope_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -8211,6 +8953,13 @@ func (ind *DerivativeOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *DerivativeOscillator) IsReady() bool {
 	r := bool(C.wickra_derivative_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DerivativeOscillator) Name() string {
+	r := C.GoString(C.wickra_derivative_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -8286,6 +9035,13 @@ func (ind *DetrendedStdDev) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DetrendedStdDev) Name() string {
+	r := C.GoString(C.wickra_detrended_std_dev_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DetrendedStdDev) Update(value float64) float64 {
@@ -8353,6 +9109,13 @@ func (ind *DisparityIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *DisparityIndex) IsReady() bool {
 	r := bool(C.wickra_disparity_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DisparityIndex) Name() string {
+	r := C.GoString(C.wickra_disparity_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -8428,6 +9191,13 @@ func (ind *DistanceSsd) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DistanceSsd) Name() string {
+	r := C.GoString(C.wickra_distance_ssd_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DistanceSsd) Update(x float64, y float64) float64 {
@@ -8499,6 +9269,13 @@ func (ind *Doji) WarmupPeriod() int {
 // emit a value.
 func (ind *Doji) IsReady() bool {
 	r := bool(C.wickra_doji_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Doji) Name() string {
+	r := C.GoString(C.wickra_doji_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -8594,6 +9371,13 @@ func (ind *DojiStar) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DojiStar) Name() string {
+	r := C.GoString(C.wickra_doji_star_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DojiStar) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -8669,6 +9453,13 @@ func NewDollarBars(dollarPerBar float64) (*DollarBars, error) {
 	return obj, nil
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DollarBars) Name() string {
+	r := C.GoString(C.wickra_dollar_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one candle and returns any bars completed by it
 // (a single candle may complete several).
 func (ind *DollarBars) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) []DollarBar {
@@ -8735,6 +9526,13 @@ func (ind *Donchian) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Donchian) Name() string {
+	r := C.GoString(C.wickra_donchian_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Donchian) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (DonchianOutput, bool) {
@@ -8792,6 +9590,13 @@ func (ind *DonchianStop) WarmupPeriod() int {
 // emit a value.
 func (ind *DonchianStop) IsReady() bool {
 	r := bool(C.wickra_donchian_stop_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DonchianStop) Name() string {
+	r := C.GoString(C.wickra_donchian_stop_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -8857,6 +9662,13 @@ func (ind *DoubleBollinger) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DoubleBollinger) Name() string {
+	r := C.GoString(C.wickra_double_bollinger_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *DoubleBollinger) Update(value float64) (DoubleBollingerOutput, bool) {
@@ -8914,6 +9726,13 @@ func (ind *DoubleTopBottom) WarmupPeriod() int {
 // emit a value.
 func (ind *DoubleTopBottom) IsReady() bool {
 	r := bool(C.wickra_double_top_bottom_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DoubleTopBottom) Name() string {
+	r := C.GoString(C.wickra_double_top_bottom_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -9009,6 +9828,13 @@ func (ind *DownsideGapThreeMethods) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DownsideGapThreeMethods) Name() string {
+	r := C.GoString(C.wickra_downside_gap_three_methods_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DownsideGapThreeMethods) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -9100,6 +9926,13 @@ func (ind *Dpo) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Dpo) Name() string {
+	r := C.GoString(C.wickra_dpo_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Dpo) Update(value float64) float64 {
@@ -9167,6 +10000,13 @@ func (ind *DragonflyDoji) WarmupPeriod() int {
 // emit a value.
 func (ind *DragonflyDoji) IsReady() bool {
 	r := bool(C.wickra_dragonfly_doji_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DragonflyDoji) Name() string {
+	r := C.GoString(C.wickra_dragonfly_doji_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -9262,6 +10102,13 @@ func (ind *DrawdownDuration) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DrawdownDuration) Name() string {
+	r := C.GoString(C.wickra_drawdown_duration_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DrawdownDuration) Update(value float64) float64 {
@@ -9329,6 +10176,13 @@ func (ind *DumplingTop) WarmupPeriod() int {
 // emit a value.
 func (ind *DumplingTop) IsReady() bool {
 	r := bool(C.wickra_dumpling_top_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *DumplingTop) Name() string {
+	r := C.GoString(C.wickra_dumpling_top_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -9424,6 +10278,13 @@ func (ind *Dx) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Dx) Name() string {
+	r := C.GoString(C.wickra_dx_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Dx) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -9515,6 +10376,13 @@ func (ind *DynamicMomentumIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *DynamicMomentumIndex) Name() string {
+	r := C.GoString(C.wickra_dynamic_momentum_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *DynamicMomentumIndex) Update(value float64) float64 {
@@ -9582,6 +10450,13 @@ func (ind *EaseOfMovement) WarmupPeriod() int {
 // emit a value.
 func (ind *EaseOfMovement) IsReady() bool {
 	r := bool(C.wickra_ease_of_movement_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *EaseOfMovement) Name() string {
+	r := C.GoString(C.wickra_ease_of_movement_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -9677,6 +10552,13 @@ func (ind *EffectiveSpread) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *EffectiveSpread) Name() string {
+	r := C.GoString(C.wickra_effective_spread_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *EffectiveSpread) Update(price float64, size float64, isBuy bool, timestamp int64, mid float64) float64 {
@@ -9730,6 +10612,13 @@ func (ind *EhlersStochastic) WarmupPeriod() int {
 // emit a value.
 func (ind *EhlersStochastic) IsReady() bool {
 	r := bool(C.wickra_ehlers_stochastic_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *EhlersStochastic) Name() string {
+	r := C.GoString(C.wickra_ehlers_stochastic_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -9805,6 +10694,13 @@ func (ind *Ehma) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Ehma) Name() string {
+	r := C.GoString(C.wickra_ehma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Ehma) Update(value float64) float64 {
@@ -9872,6 +10768,13 @@ func (ind *ElderImpulse) WarmupPeriod() int {
 // emit a value.
 func (ind *ElderImpulse) IsReady() bool {
 	r := bool(C.wickra_elder_impulse_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ElderImpulse) Name() string {
+	r := C.GoString(C.wickra_elder_impulse_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -9947,6 +10850,13 @@ func (ind *ElderRay) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ElderRay) Name() string {
+	r := C.GoString(C.wickra_elder_ray_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ElderRay) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ElderRayOutput, bool) {
@@ -10008,6 +10918,13 @@ func (ind *ElderSafeZone) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ElderSafeZone) Name() string {
+	r := C.GoString(C.wickra_elder_safe_zone_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ElderSafeZone) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ElderSafeZoneOutput, bool) {
@@ -10065,6 +10982,13 @@ func (ind *Ema) WarmupPeriod() int {
 // emit a value.
 func (ind *Ema) IsReady() bool {
 	r := bool(C.wickra_ema_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Ema) Name() string {
+	r := C.GoString(C.wickra_ema_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -10140,6 +11064,13 @@ func (ind *EmpiricalModeDecomposition) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *EmpiricalModeDecomposition) Name() string {
+	r := C.GoString(C.wickra_empirical_mode_decomposition_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *EmpiricalModeDecomposition) Update(value float64) float64 {
@@ -10207,6 +11138,13 @@ func (ind *Engulfing) WarmupPeriod() int {
 // emit a value.
 func (ind *Engulfing) IsReady() bool {
 	r := bool(C.wickra_engulfing_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Engulfing) Name() string {
+	r := C.GoString(C.wickra_engulfing_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -10302,6 +11240,13 @@ func (ind *Equivolume) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Equivolume) Name() string {
+	r := C.GoString(C.wickra_equivolume_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Equivolume) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (EquivolumeOutput, bool) {
@@ -10363,6 +11308,13 @@ func (ind *EstimatedLeverageRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *EstimatedLeverageRatio) Name() string {
+	r := C.GoString(C.wickra_estimated_leverage_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *EstimatedLeverageRatio) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -10416,6 +11368,13 @@ func (ind *EvenBetterSinewave) WarmupPeriod() int {
 // emit a value.
 func (ind *EvenBetterSinewave) IsReady() bool {
 	r := bool(C.wickra_even_better_sinewave_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *EvenBetterSinewave) Name() string {
+	r := C.GoString(C.wickra_even_better_sinewave_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -10487,6 +11446,13 @@ func (ind *EveningDojiStar) WarmupPeriod() int {
 // emit a value.
 func (ind *EveningDojiStar) IsReady() bool {
 	r := bool(C.wickra_evening_doji_star_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *EveningDojiStar) Name() string {
+	r := C.GoString(C.wickra_evening_doji_star_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -10582,6 +11548,13 @@ func (ind *Evwma) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Evwma) Name() string {
+	r := C.GoString(C.wickra_evwma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Evwma) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -10673,6 +11646,13 @@ func (ind *EwmaVolatility) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *EwmaVolatility) Name() string {
+	r := C.GoString(C.wickra_ewma_volatility_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *EwmaVolatility) Update(value float64) float64 {
@@ -10744,6 +11724,13 @@ func (ind *Expectancy) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Expectancy) Name() string {
+	r := C.GoString(C.wickra_expectancy_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Expectancy) Update(value float64) float64 {
@@ -10811,6 +11798,13 @@ func (ind *FallingThreeMethods) WarmupPeriod() int {
 // emit a value.
 func (ind *FallingThreeMethods) IsReady() bool {
 	r := bool(C.wickra_falling_three_methods_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FallingThreeMethods) Name() string {
+	r := C.GoString(C.wickra_falling_three_methods_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -10906,6 +11900,13 @@ func (ind *Fama) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Fama) Name() string {
+	r := C.GoString(C.wickra_fama_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Fama) Update(value float64) float64 {
@@ -10977,6 +11978,13 @@ func (ind *FibArcs) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FibArcs) Name() string {
+	r := C.GoString(C.wickra_fib_arcs_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *FibArcs) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (FibArcsOutput, bool) {
@@ -11034,6 +12042,13 @@ func (ind *FibChannel) WarmupPeriod() int {
 // emit a value.
 func (ind *FibChannel) IsReady() bool {
 	r := bool(C.wickra_fib_channel_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FibChannel) Name() string {
+	r := C.GoString(C.wickra_fib_channel_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11099,6 +12114,13 @@ func (ind *FibConfluence) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FibConfluence) Name() string {
+	r := C.GoString(C.wickra_fib_confluence_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *FibConfluence) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (FibConfluenceOutput, bool) {
@@ -11156,6 +12178,13 @@ func (ind *FibExtension) WarmupPeriod() int {
 // emit a value.
 func (ind *FibExtension) IsReady() bool {
 	r := bool(C.wickra_fib_extension_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FibExtension) Name() string {
+	r := C.GoString(C.wickra_fib_extension_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11221,6 +12250,13 @@ func (ind *FibFan) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FibFan) Name() string {
+	r := C.GoString(C.wickra_fib_fan_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *FibFan) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (FibFanOutput, bool) {
@@ -11278,6 +12314,13 @@ func (ind *FibProjection) WarmupPeriod() int {
 // emit a value.
 func (ind *FibProjection) IsReady() bool {
 	r := bool(C.wickra_fib_projection_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FibProjection) Name() string {
+	r := C.GoString(C.wickra_fib_projection_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11343,6 +12386,13 @@ func (ind *FibRetracement) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FibRetracement) Name() string {
+	r := C.GoString(C.wickra_fib_retracement_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *FibRetracement) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (FibRetracementOutput, bool) {
@@ -11400,6 +12450,13 @@ func (ind *FibTimeZones) WarmupPeriod() int {
 // emit a value.
 func (ind *FibTimeZones) IsReady() bool {
 	r := bool(C.wickra_fib_time_zones_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FibTimeZones) Name() string {
+	r := C.GoString(C.wickra_fib_time_zones_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11465,6 +12522,13 @@ func (ind *FibonacciPivots) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FibonacciPivots) Name() string {
+	r := C.GoString(C.wickra_fibonacci_pivots_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *FibonacciPivots) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (FibonacciPivotsOutput, bool) {
@@ -11522,6 +12586,13 @@ func (ind *FisherRsi) WarmupPeriod() int {
 // emit a value.
 func (ind *FisherRsi) IsReady() bool {
 	r := bool(C.wickra_fisher_rsi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FisherRsi) Name() string {
+	r := C.GoString(C.wickra_fisher_rsi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11597,6 +12668,13 @@ func (ind *FisherTransform) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FisherTransform) Name() string {
+	r := C.GoString(C.wickra_fisher_transform_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *FisherTransform) Update(value float64) float64 {
@@ -11664,6 +12742,13 @@ func (ind *FlagPennant) WarmupPeriod() int {
 // emit a value.
 func (ind *FlagPennant) IsReady() bool {
 	r := bool(C.wickra_flag_pennant_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FlagPennant) Name() string {
+	r := C.GoString(C.wickra_flag_pennant_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11759,6 +12844,13 @@ func (ind *Footprint) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Footprint) Name() string {
+	r := C.GoString(C.wickra_footprint_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one candle and returns any bars completed by it
 // (a single candle may complete several).
 func (ind *Footprint) Update(price float64, size float64, isBuy bool, timestamp int64) []FootprintLevel {
@@ -11821,6 +12913,13 @@ func (ind *ForceIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *ForceIndex) IsReady() bool {
 	r := bool(C.wickra_force_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ForceIndex) Name() string {
+	r := C.GoString(C.wickra_force_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -11916,6 +13015,13 @@ func (ind *FractalChaosBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FractalChaosBands) Name() string {
+	r := C.GoString(C.wickra_fractal_chaos_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *FractalChaosBands) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (FractalChaosBandsOutput, bool) {
@@ -11973,6 +13079,13 @@ func (ind *Frama) WarmupPeriod() int {
 // emit a value.
 func (ind *Frama) IsReady() bool {
 	r := bool(C.wickra_frama_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Frama) Name() string {
+	r := C.GoString(C.wickra_frama_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12044,6 +13157,13 @@ func (ind *FryPanBottom) WarmupPeriod() int {
 // emit a value.
 func (ind *FryPanBottom) IsReady() bool {
 	r := bool(C.wickra_fry_pan_bottom_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FryPanBottom) Name() string {
+	r := C.GoString(C.wickra_fry_pan_bottom_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12139,6 +13259,13 @@ func (ind *FundingBasis) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FundingBasis) Name() string {
+	r := C.GoString(C.wickra_funding_basis_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *FundingBasis) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -12192,6 +13319,13 @@ func (ind *FundingImpliedApr) WarmupPeriod() int {
 // emit a value.
 func (ind *FundingImpliedApr) IsReady() bool {
 	r := bool(C.wickra_funding_implied_apr_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FundingImpliedApr) Name() string {
+	r := C.GoString(C.wickra_funding_implied_apr_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12253,6 +13387,13 @@ func (ind *FundingRate) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FundingRate) Name() string {
+	r := C.GoString(C.wickra_funding_rate_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *FundingRate) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -12306,6 +13447,13 @@ func (ind *FundingRateMean) WarmupPeriod() int {
 // emit a value.
 func (ind *FundingRateMean) IsReady() bool {
 	r := bool(C.wickra_funding_rate_mean_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *FundingRateMean) Name() string {
+	r := C.GoString(C.wickra_funding_rate_mean_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12367,6 +13515,13 @@ func (ind *FundingRateZScore) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *FundingRateZScore) Name() string {
+	r := C.GoString(C.wickra_funding_rate_z_score_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *FundingRateZScore) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -12420,6 +13575,13 @@ func (ind *GainLossRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *GainLossRatio) IsReady() bool {
 	r := bool(C.wickra_gain_loss_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *GainLossRatio) Name() string {
+	r := C.GoString(C.wickra_gain_loss_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12495,6 +13657,13 @@ func (ind *GainToPainRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *GainToPainRatio) Name() string {
+	r := C.GoString(C.wickra_gain_to_pain_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *GainToPainRatio) Update(value float64) float64 {
@@ -12562,6 +13731,13 @@ func (ind *GapSideBySideWhite) WarmupPeriod() int {
 // emit a value.
 func (ind *GapSideBySideWhite) IsReady() bool {
 	r := bool(C.wickra_gap_side_by_side_white_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *GapSideBySideWhite) Name() string {
+	r := C.GoString(C.wickra_gap_side_by_side_white_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12657,6 +13833,13 @@ func (ind *Garch11) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Garch11) Name() string {
+	r := C.GoString(C.wickra_garch11_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Garch11) Update(value float64) float64 {
@@ -12724,6 +13907,13 @@ func (ind *GarmanKlassVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *GarmanKlassVolatility) IsReady() bool {
 	r := bool(C.wickra_garman_klass_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *GarmanKlassVolatility) Name() string {
+	r := C.GoString(C.wickra_garman_klass_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -12819,6 +14009,13 @@ func (ind *Gartley) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Gartley) Name() string {
+	r := C.GoString(C.wickra_gartley_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Gartley) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -12910,6 +14107,13 @@ func (ind *GatorOscillator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *GatorOscillator) Name() string {
+	r := C.GoString(C.wickra_gator_oscillator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *GatorOscillator) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (GatorOscillatorOutput, bool) {
@@ -12967,6 +14171,13 @@ func (ind *GeneralizedDema) WarmupPeriod() int {
 // emit a value.
 func (ind *GeneralizedDema) IsReady() bool {
 	r := bool(C.wickra_generalized_dema_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *GeneralizedDema) Name() string {
+	r := C.GoString(C.wickra_generalized_dema_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -13042,6 +14253,13 @@ func (ind *GeometricMa) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *GeometricMa) Name() string {
+	r := C.GoString(C.wickra_geometric_ma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *GeometricMa) Update(value float64) float64 {
@@ -13113,6 +14331,13 @@ func (ind *GoldenPocket) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *GoldenPocket) Name() string {
+	r := C.GoString(C.wickra_golden_pocket_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *GoldenPocket) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (GoldenPocketOutput, bool) {
@@ -13170,6 +14395,13 @@ func (ind *GrangerCausality) WarmupPeriod() int {
 // emit a value.
 func (ind *GrangerCausality) IsReady() bool {
 	r := bool(C.wickra_granger_causality_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *GrangerCausality) Name() string {
+	r := C.GoString(C.wickra_granger_causality_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -13245,6 +14477,13 @@ func (ind *GravestoneDoji) WarmupPeriod() int {
 // emit a value.
 func (ind *GravestoneDoji) IsReady() bool {
 	r := bool(C.wickra_gravestone_doji_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *GravestoneDoji) Name() string {
+	r := C.GoString(C.wickra_gravestone_doji_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -13340,6 +14579,13 @@ func (ind *Hammer) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Hammer) Name() string {
+	r := C.GoString(C.wickra_hammer_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Hammer) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -13427,6 +14673,13 @@ func (ind *HangingMan) WarmupPeriod() int {
 // emit a value.
 func (ind *HangingMan) IsReady() bool {
 	r := bool(C.wickra_hanging_man_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HangingMan) Name() string {
+	r := C.GoString(C.wickra_hanging_man_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -13522,6 +14775,13 @@ func (ind *Harami) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Harami) Name() string {
+	r := C.GoString(C.wickra_harami_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Harami) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -13609,6 +14869,13 @@ func (ind *HaramiCross) WarmupPeriod() int {
 // emit a value.
 func (ind *HaramiCross) IsReady() bool {
 	r := bool(C.wickra_harami_cross_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HaramiCross) Name() string {
+	r := C.GoString(C.wickra_harami_cross_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -13704,6 +14971,13 @@ func (ind *HasbrouckInformationShare) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HasbrouckInformationShare) Name() string {
+	r := C.GoString(C.wickra_hasbrouck_information_share_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HasbrouckInformationShare) Update(x float64, y float64) float64 {
@@ -13775,6 +15049,13 @@ func (ind *HeadAndShoulders) WarmupPeriod() int {
 // emit a value.
 func (ind *HeadAndShoulders) IsReady() bool {
 	r := bool(C.wickra_head_and_shoulders_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HeadAndShoulders) Name() string {
+	r := C.GoString(C.wickra_head_and_shoulders_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -13870,6 +15151,13 @@ func (ind *HeikinAshi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HeikinAshi) Name() string {
+	r := C.GoString(C.wickra_heikin_ashi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *HeikinAshi) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (HeikinAshiOutput, bool) {
@@ -13927,6 +15215,13 @@ func (ind *HeikinAshiOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *HeikinAshiOscillator) IsReady() bool {
 	r := bool(C.wickra_heikin_ashi_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HeikinAshiOscillator) Name() string {
+	r := C.GoString(C.wickra_heikin_ashi_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -14022,6 +15317,13 @@ func (ind *HiLoActivator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HiLoActivator) Name() string {
+	r := C.GoString(C.wickra_hi_lo_activator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HiLoActivator) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -14113,6 +15415,13 @@ func (ind *HighLowIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HighLowIndex) Name() string {
+	r := C.GoString(C.wickra_high_low_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *HighLowIndex) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -14187,6 +15496,13 @@ func (ind *HighLowRange) WarmupPeriod() int {
 // emit a value.
 func (ind *HighLowRange) IsReady() bool {
 	r := bool(C.wickra_high_low_range_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HighLowRange) Name() string {
+	r := C.GoString(C.wickra_high_low_range_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -14282,6 +15598,13 @@ func (ind *HighLowVolumeNodes) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HighLowVolumeNodes) Name() string {
+	r := C.GoString(C.wickra_high_low_volume_nodes_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *HighLowVolumeNodes) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (HighLowVolumeNodesOutput, bool) {
@@ -14339,6 +15662,13 @@ func (ind *HighWave) WarmupPeriod() int {
 // emit a value.
 func (ind *HighWave) IsReady() bool {
 	r := bool(C.wickra_high_wave_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HighWave) Name() string {
+	r := C.GoString(C.wickra_high_wave_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -14434,6 +15764,13 @@ func (ind *HighpassFilter) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HighpassFilter) Name() string {
+	r := C.GoString(C.wickra_highpass_filter_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HighpassFilter) Update(value float64) float64 {
@@ -14501,6 +15838,13 @@ func (ind *Hikkake) WarmupPeriod() int {
 // emit a value.
 func (ind *Hikkake) IsReady() bool {
 	r := bool(C.wickra_hikkake_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Hikkake) Name() string {
+	r := C.GoString(C.wickra_hikkake_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -14596,6 +15940,13 @@ func (ind *HikkakeModified) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HikkakeModified) Name() string {
+	r := C.GoString(C.wickra_hikkake_modified_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HikkakeModified) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -14687,6 +16038,13 @@ func (ind *HilbertDominantCycle) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HilbertDominantCycle) Name() string {
+	r := C.GoString(C.wickra_hilbert_dominant_cycle_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HilbertDominantCycle) Update(value float64) float64 {
@@ -14754,6 +16112,13 @@ func (ind *HistoricalVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *HistoricalVolatility) IsReady() bool {
 	r := bool(C.wickra_historical_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HistoricalVolatility) Name() string {
+	r := C.GoString(C.wickra_historical_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -14829,6 +16194,13 @@ func (ind *Hma) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Hma) Name() string {
+	r := C.GoString(C.wickra_hma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Hma) Update(value float64) float64 {
@@ -14900,6 +16272,13 @@ func (ind *HoltWinters) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HoltWinters) Name() string {
+	r := C.GoString(C.wickra_holt_winters_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HoltWinters) Update(value float64) float64 {
@@ -14967,6 +16346,13 @@ func (ind *HomingPigeon) WarmupPeriod() int {
 // emit a value.
 func (ind *HomingPigeon) IsReady() bool {
 	r := bool(C.wickra_homing_pigeon_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HomingPigeon) Name() string {
+	r := C.GoString(C.wickra_homing_pigeon_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -15062,6 +16448,13 @@ func (ind *HtDcPhase) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HtDcPhase) Name() string {
+	r := C.GoString(C.wickra_ht_dc_phase_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *HtDcPhase) Update(value float64) float64 {
@@ -15133,6 +16526,13 @@ func (ind *HtPhasor) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HtPhasor) Name() string {
+	r := C.GoString(C.wickra_ht_phasor_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *HtPhasor) Update(value float64) (HtPhasorOutput, bool) {
@@ -15190,6 +16590,13 @@ func (ind *HtTrendMode) WarmupPeriod() int {
 // emit a value.
 func (ind *HtTrendMode) IsReady() bool {
 	r := bool(C.wickra_ht_trend_mode_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HtTrendMode) Name() string {
+	r := C.GoString(C.wickra_ht_trend_mode_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -15265,6 +16672,13 @@ func (ind *HurstChannel) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *HurstChannel) Name() string {
+	r := C.GoString(C.wickra_hurst_channel_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *HurstChannel) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (HurstChannelOutput, bool) {
@@ -15322,6 +16736,13 @@ func (ind *HurstExponent) WarmupPeriod() int {
 // emit a value.
 func (ind *HurstExponent) IsReady() bool {
 	r := bool(C.wickra_hurst_exponent_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *HurstExponent) Name() string {
+	r := C.GoString(C.wickra_hurst_exponent_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -15397,6 +16818,13 @@ func (ind *Ichimoku) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Ichimoku) Name() string {
+	r := C.GoString(C.wickra_ichimoku_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Ichimoku) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (IchimokuOutput, bool) {
@@ -15454,6 +16882,13 @@ func (ind *IdenticalThreeCrows) WarmupPeriod() int {
 // emit a value.
 func (ind *IdenticalThreeCrows) IsReady() bool {
 	r := bool(C.wickra_identical_three_crows_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *IdenticalThreeCrows) Name() string {
+	r := C.GoString(C.wickra_identical_three_crows_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -15533,6 +16968,13 @@ func NewImbalanceBars(threshold float64) (*ImbalanceBars, error) {
 	return obj, nil
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ImbalanceBars) Name() string {
+	r := C.GoString(C.wickra_imbalance_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one candle and returns any bars completed by it
 // (a single candle may complete several).
 func (ind *ImbalanceBars) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) []ImbalanceBar {
@@ -15595,6 +17037,13 @@ func (ind *InNeck) WarmupPeriod() int {
 // emit a value.
 func (ind *InNeck) IsReady() bool {
 	r := bool(C.wickra_in_neck_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *InNeck) Name() string {
+	r := C.GoString(C.wickra_in_neck_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -15690,6 +17139,13 @@ func (ind *Inertia) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Inertia) Name() string {
+	r := C.GoString(C.wickra_inertia_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Inertia) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -15781,6 +17237,13 @@ func (ind *InformationRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *InformationRatio) Name() string {
+	r := C.GoString(C.wickra_information_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *InformationRatio) Update(x float64, y float64) float64 {
@@ -15856,6 +17319,13 @@ func (ind *InitialBalance) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *InitialBalance) Name() string {
+	r := C.GoString(C.wickra_initial_balance_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *InitialBalance) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (InitialBalanceOutput, bool) {
@@ -15913,6 +17383,13 @@ func (ind *InstantaneousTrendline) WarmupPeriod() int {
 // emit a value.
 func (ind *InstantaneousTrendline) IsReady() bool {
 	r := bool(C.wickra_instantaneous_trendline_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *InstantaneousTrendline) Name() string {
+	r := C.GoString(C.wickra_instantaneous_trendline_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -15984,6 +17461,13 @@ func (ind *IntradayIntensity) WarmupPeriod() int {
 // emit a value.
 func (ind *IntradayIntensity) IsReady() bool {
 	r := bool(C.wickra_intraday_intensity_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *IntradayIntensity) Name() string {
+	r := C.GoString(C.wickra_intraday_intensity_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -16075,6 +17559,13 @@ func (ind *IntradayMomentumIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *IntradayMomentumIndex) IsReady() bool {
 	r := bool(C.wickra_intraday_momentum_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *IntradayMomentumIndex) Name() string {
+	r := C.GoString(C.wickra_intraday_momentum_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -16172,6 +17663,13 @@ func (ind *IntradayVolatilityProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *IntradayVolatilityProfile) Name() string {
+	r := C.GoString(C.wickra_intraday_volatility_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the profile values
 // (ok is false during warmup).
 func (ind *IntradayVolatilityProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) ([]float64, bool) {
@@ -16229,6 +17727,13 @@ func (ind *InverseFisherTransform) WarmupPeriod() int {
 // emit a value.
 func (ind *InverseFisherTransform) IsReady() bool {
 	r := bool(C.wickra_inverse_fisher_transform_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *InverseFisherTransform) Name() string {
+	r := C.GoString(C.wickra_inverse_fisher_transform_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -16300,6 +17805,13 @@ func (ind *InvertedHammer) WarmupPeriod() int {
 // emit a value.
 func (ind *InvertedHammer) IsReady() bool {
 	r := bool(C.wickra_inverted_hammer_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *InvertedHammer) Name() string {
+	r := C.GoString(C.wickra_inverted_hammer_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -16395,6 +17907,13 @@ func (ind *JarqueBera) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *JarqueBera) Name() string {
+	r := C.GoString(C.wickra_jarque_bera_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *JarqueBera) Update(value float64) float64 {
@@ -16462,6 +17981,13 @@ func (ind *Jma) WarmupPeriod() int {
 // emit a value.
 func (ind *Jma) IsReady() bool {
 	r := bool(C.wickra_jma_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Jma) Name() string {
+	r := C.GoString(C.wickra_jma_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -16537,6 +18063,13 @@ func (ind *JumpIndicator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *JumpIndicator) Name() string {
+	r := C.GoString(C.wickra_jump_indicator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *JumpIndicator) Update(value float64) float64 {
@@ -16608,6 +18141,13 @@ func (ind *KRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *KRatio) Name() string {
+	r := C.GoString(C.wickra_k_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *KRatio) Update(value float64) float64 {
@@ -16661,6 +18201,13 @@ func NewKagiBars(reversal float64) (*KagiBars, error) {
 	obj := &KagiBars{handle: ptr}
 	runtime.SetFinalizer(obj, (*KagiBars).Close)
 	return obj, nil
+}
+
+// Name returns the indicator's canonical name.
+func (ind *KagiBars) Name() string {
+	r := C.GoString(C.wickra_kagi_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
 }
 
 // Update feeds one candle and returns any bars completed by it
@@ -16729,6 +18276,13 @@ func (ind *KalmanHedgeRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *KalmanHedgeRatio) Name() string {
+	r := C.GoString(C.wickra_kalman_hedge_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *KalmanHedgeRatio) Update(x float64, y float64) (KalmanHedgeRatioOutput, bool) {
@@ -16786,6 +18340,13 @@ func (ind *Kama) WarmupPeriod() int {
 // emit a value.
 func (ind *Kama) IsReady() bool {
 	r := bool(C.wickra_kama_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Kama) Name() string {
+	r := C.GoString(C.wickra_kama_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -16861,6 +18422,13 @@ func (ind *KaseDevStop) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *KaseDevStop) Name() string {
+	r := C.GoString(C.wickra_kase_dev_stop_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *KaseDevStop) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (KaseDevStopOutput, bool) {
@@ -16922,6 +18490,13 @@ func (ind *KasePermissionStochastic) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *KasePermissionStochastic) Name() string {
+	r := C.GoString(C.wickra_kase_permission_stochastic_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *KasePermissionStochastic) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (KasePermissionStochasticOutput, bool) {
@@ -16979,6 +18554,13 @@ func (ind *KellyCriterion) WarmupPeriod() int {
 // emit a value.
 func (ind *KellyCriterion) IsReady() bool {
 	r := bool(C.wickra_kelly_criterion_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *KellyCriterion) Name() string {
+	r := C.GoString(C.wickra_kelly_criterion_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17054,6 +18636,13 @@ func (ind *Keltner) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Keltner) Name() string {
+	r := C.GoString(C.wickra_keltner_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Keltner) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (KeltnerOutput, bool) {
@@ -17111,6 +18700,13 @@ func (ind *KendallTau) WarmupPeriod() int {
 // emit a value.
 func (ind *KendallTau) IsReady() bool {
 	r := bool(C.wickra_kendall_tau_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *KendallTau) Name() string {
+	r := C.GoString(C.wickra_kendall_tau_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17186,6 +18782,13 @@ func (ind *Kicking) WarmupPeriod() int {
 // emit a value.
 func (ind *Kicking) IsReady() bool {
 	r := bool(C.wickra_kicking_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Kicking) Name() string {
+	r := C.GoString(C.wickra_kicking_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17281,6 +18884,13 @@ func (ind *KickingByLength) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *KickingByLength) Name() string {
+	r := C.GoString(C.wickra_kicking_by_length_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *KickingByLength) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -17372,6 +18982,13 @@ func (ind *Kst) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Kst) Name() string {
+	r := C.GoString(C.wickra_kst_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Kst) Update(value float64) (KstOutput, bool) {
@@ -17429,6 +19046,13 @@ func (ind *Kurtosis) WarmupPeriod() int {
 // emit a value.
 func (ind *Kurtosis) IsReady() bool {
 	r := bool(C.wickra_kurtosis_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Kurtosis) Name() string {
+	r := C.GoString(C.wickra_kurtosis_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17500,6 +19124,13 @@ func (ind *Kvo) WarmupPeriod() int {
 // emit a value.
 func (ind *Kvo) IsReady() bool {
 	r := bool(C.wickra_kvo_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Kvo) Name() string {
+	r := C.GoString(C.wickra_kvo_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17595,6 +19226,13 @@ func (ind *KylesLambda) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *KylesLambda) Name() string {
+	r := C.GoString(C.wickra_kyles_lambda_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *KylesLambda) Update(price float64, size float64, isBuy bool, timestamp int64, mid float64) float64 {
@@ -17648,6 +19286,13 @@ func (ind *LadderBottom) WarmupPeriod() int {
 // emit a value.
 func (ind *LadderBottom) IsReady() bool {
 	r := bool(C.wickra_ladder_bottom_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *LadderBottom) Name() string {
+	r := C.GoString(C.wickra_ladder_bottom_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17743,6 +19388,13 @@ func (ind *LaguerreRsi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LaguerreRsi) Name() string {
+	r := C.GoString(C.wickra_laguerre_rsi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *LaguerreRsi) Update(value float64) float64 {
@@ -17814,6 +19466,13 @@ func (ind *LeadLagCrossCorrelation) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LeadLagCrossCorrelation) Name() string {
+	r := C.GoString(C.wickra_lead_lag_cross_correlation_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *LeadLagCrossCorrelation) Update(x float64, y float64) (LeadLagCrossCorrelationOutput, bool) {
@@ -17871,6 +19530,13 @@ func (ind *LinRegAngle) WarmupPeriod() int {
 // emit a value.
 func (ind *LinRegAngle) IsReady() bool {
 	r := bool(C.wickra_lin_reg_angle_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *LinRegAngle) Name() string {
+	r := C.GoString(C.wickra_lin_reg_angle_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -17946,6 +19612,13 @@ func (ind *LinRegChannel) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LinRegChannel) Name() string {
+	r := C.GoString(C.wickra_lin_reg_channel_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *LinRegChannel) Update(value float64) (LinRegChannelOutput, bool) {
@@ -18003,6 +19676,13 @@ func (ind *LinRegIntercept) WarmupPeriod() int {
 // emit a value.
 func (ind *LinRegIntercept) IsReady() bool {
 	r := bool(C.wickra_lin_reg_intercept_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *LinRegIntercept) Name() string {
+	r := C.GoString(C.wickra_lin_reg_intercept_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18078,6 +19758,13 @@ func (ind *LinRegSlope) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LinRegSlope) Name() string {
+	r := C.GoString(C.wickra_lin_reg_slope_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *LinRegSlope) Update(value float64) float64 {
@@ -18145,6 +19832,13 @@ func (ind *LinearRegression) WarmupPeriod() int {
 // emit a value.
 func (ind *LinearRegression) IsReady() bool {
 	r := bool(C.wickra_linear_regression_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *LinearRegression) Name() string {
+	r := C.GoString(C.wickra_linear_regression_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18220,6 +19914,13 @@ func (ind *LiquidationFeatures) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LiquidationFeatures) Name() string {
+	r := C.GoString(C.wickra_liquidation_features_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *LiquidationFeatures) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) (LiquidationFeaturesOutput, bool) {
@@ -18277,6 +19978,13 @@ func (ind *LogReturn) WarmupPeriod() int {
 // emit a value.
 func (ind *LogReturn) IsReady() bool {
 	r := bool(C.wickra_log_return_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *LogReturn) Name() string {
+	r := C.GoString(C.wickra_log_return_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18348,6 +20056,13 @@ func (ind *LongLeggedDoji) WarmupPeriod() int {
 // emit a value.
 func (ind *LongLeggedDoji) IsReady() bool {
 	r := bool(C.wickra_long_legged_doji_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *LongLeggedDoji) Name() string {
+	r := C.GoString(C.wickra_long_legged_doji_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18443,6 +20158,13 @@ func (ind *LongLine) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LongLine) Name() string {
+	r := C.GoString(C.wickra_long_line_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *LongLine) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -18534,6 +20256,13 @@ func (ind *LongShortRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *LongShortRatio) Name() string {
+	r := C.GoString(C.wickra_long_short_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *LongShortRatio) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -18587,6 +20316,13 @@ func (ind *M2Measure) WarmupPeriod() int {
 // emit a value.
 func (ind *M2Measure) IsReady() bool {
 	r := bool(C.wickra_m2_measure_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *M2Measure) Name() string {
+	r := C.GoString(C.wickra_m2_measure_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18662,6 +20398,13 @@ func (ind *MaEnvelope) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MaEnvelope) Name() string {
+	r := C.GoString(C.wickra_ma_envelope_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *MaEnvelope) Update(value float64) (MaEnvelopeOutput, bool) {
@@ -18719,6 +20462,13 @@ func (ind *MacdExt) WarmupPeriod() int {
 // emit a value.
 func (ind *MacdExt) IsReady() bool {
 	r := bool(C.wickra_macd_ext_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MacdExt) Name() string {
+	r := C.GoString(C.wickra_macd_ext_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18784,6 +20534,13 @@ func (ind *MacdFix) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MacdFix) Name() string {
+	r := C.GoString(C.wickra_macd_fix_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *MacdFix) Update(value float64) (MacdOutput, bool) {
@@ -18841,6 +20598,13 @@ func (ind *MacdHistogram) WarmupPeriod() int {
 // emit a value.
 func (ind *MacdHistogram) IsReady() bool {
 	r := bool(C.wickra_macd_histogram_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MacdHistogram) Name() string {
+	r := C.GoString(C.wickra_macd_histogram_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -18916,6 +20680,13 @@ func (ind *MacdIndicator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MacdIndicator) Name() string {
+	r := C.GoString(C.wickra_macd_indicator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *MacdIndicator) Update(value float64) (MacdOutput, bool) {
@@ -18977,6 +20748,13 @@ func (ind *Mama) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Mama) Name() string {
+	r := C.GoString(C.wickra_mama_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Mama) Update(value float64) (MamaOutput, bool) {
@@ -19034,6 +20812,13 @@ func (ind *MarketFacilitationIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *MarketFacilitationIndex) IsReady() bool {
 	r := bool(C.wickra_market_facilitation_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MarketFacilitationIndex) Name() string {
+	r := C.GoString(C.wickra_market_facilitation_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -19129,6 +20914,13 @@ func (ind *MartinRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MartinRatio) Name() string {
+	r := C.GoString(C.wickra_martin_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *MartinRatio) Update(value float64) float64 {
@@ -19196,6 +20988,13 @@ func (ind *Marubozu) WarmupPeriod() int {
 // emit a value.
 func (ind *Marubozu) IsReady() bool {
 	r := bool(C.wickra_marubozu_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Marubozu) Name() string {
+	r := C.GoString(C.wickra_marubozu_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -19291,6 +21090,13 @@ func (ind *MassIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MassIndex) Name() string {
+	r := C.GoString(C.wickra_mass_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *MassIndex) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -19378,6 +21184,13 @@ func (ind *MatHold) WarmupPeriod() int {
 // emit a value.
 func (ind *MatHold) IsReady() bool {
 	r := bool(C.wickra_mat_hold_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MatHold) Name() string {
+	r := C.GoString(C.wickra_mat_hold_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -19473,6 +21286,13 @@ func (ind *MatchingLow) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MatchingLow) Name() string {
+	r := C.GoString(C.wickra_matching_low_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *MatchingLow) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -19564,6 +21384,13 @@ func (ind *MaxDrawdown) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MaxDrawdown) Name() string {
+	r := C.GoString(C.wickra_max_drawdown_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *MaxDrawdown) Update(value float64) float64 {
@@ -19631,6 +21458,13 @@ func (ind *McClellanOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *McClellanOscillator) IsReady() bool {
 	r := bool(C.wickra_mc_clellan_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *McClellanOscillator) Name() string {
+	r := C.GoString(C.wickra_mc_clellan_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -19713,6 +21547,13 @@ func (ind *McClellanSummationIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *McClellanSummationIndex) Name() string {
+	r := C.GoString(C.wickra_mc_clellan_summation_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *McClellanSummationIndex) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -19791,6 +21632,13 @@ func (ind *McGinleyDynamic) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *McGinleyDynamic) Name() string {
+	r := C.GoString(C.wickra_mc_ginley_dynamic_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *McGinleyDynamic) Update(value float64) float64 {
@@ -19858,6 +21706,13 @@ func (ind *MedianAbsoluteDeviation) WarmupPeriod() int {
 // emit a value.
 func (ind *MedianAbsoluteDeviation) IsReady() bool {
 	r := bool(C.wickra_median_absolute_deviation_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MedianAbsoluteDeviation) Name() string {
+	r := C.GoString(C.wickra_median_absolute_deviation_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -19933,6 +21788,13 @@ func (ind *MedianChannel) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MedianChannel) Name() string {
+	r := C.GoString(C.wickra_median_channel_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *MedianChannel) Update(value float64) (MedianChannelOutput, bool) {
@@ -19990,6 +21852,13 @@ func (ind *MedianMa) WarmupPeriod() int {
 // emit a value.
 func (ind *MedianMa) IsReady() bool {
 	r := bool(C.wickra_median_ma_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MedianMa) Name() string {
+	r := C.GoString(C.wickra_median_ma_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20061,6 +21930,13 @@ func (ind *MedianPrice) WarmupPeriod() int {
 // emit a value.
 func (ind *MedianPrice) IsReady() bool {
 	r := bool(C.wickra_median_price_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MedianPrice) Name() string {
+	r := C.GoString(C.wickra_median_price_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20156,6 +22032,13 @@ func (ind *Mfi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Mfi) Name() string {
+	r := C.GoString(C.wickra_mfi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Mfi) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -20247,6 +22130,13 @@ func (ind *Microprice) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Microprice) Name() string {
+	r := C.GoString(C.wickra_microprice_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *Microprice) Update(bidPrice []float64, bidSize []float64, askPrice []float64, askSize []float64) float64 {
@@ -20310,6 +22200,13 @@ func (ind *MidPoint) WarmupPeriod() int {
 // emit a value.
 func (ind *MidPoint) IsReady() bool {
 	r := bool(C.wickra_mid_point_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MidPoint) Name() string {
+	r := C.GoString(C.wickra_mid_point_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20381,6 +22278,13 @@ func (ind *MidPrice) WarmupPeriod() int {
 // emit a value.
 func (ind *MidPrice) IsReady() bool {
 	r := bool(C.wickra_mid_price_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MidPrice) Name() string {
+	r := C.GoString(C.wickra_mid_price_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20476,6 +22380,13 @@ func (ind *MinusDi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MinusDi) Name() string {
+	r := C.GoString(C.wickra_minus_di_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *MinusDi) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -20563,6 +22474,13 @@ func (ind *MinusDm) WarmupPeriod() int {
 // emit a value.
 func (ind *MinusDm) IsReady() bool {
 	r := bool(C.wickra_minus_dm_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MinusDm) Name() string {
+	r := C.GoString(C.wickra_minus_dm_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20658,6 +22576,13 @@ func (ind *ModifiedMaStop) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ModifiedMaStop) Name() string {
+	r := C.GoString(C.wickra_modified_ma_stop_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ModifiedMaStop) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ModifiedMaStopOutput, bool) {
@@ -20715,6 +22640,13 @@ func (ind *Mom) WarmupPeriod() int {
 // emit a value.
 func (ind *Mom) IsReady() bool {
 	r := bool(C.wickra_mom_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Mom) Name() string {
+	r := C.GoString(C.wickra_mom_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20786,6 +22718,13 @@ func (ind *MorningDojiStar) WarmupPeriod() int {
 // emit a value.
 func (ind *MorningDojiStar) IsReady() bool {
 	r := bool(C.wickra_morning_doji_star_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *MorningDojiStar) Name() string {
+	r := C.GoString(C.wickra_morning_doji_star_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -20881,6 +22820,13 @@ func (ind *MorningEveningStar) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MorningEveningStar) Name() string {
+	r := C.GoString(C.wickra_morning_evening_star_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *MorningEveningStar) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -20972,6 +22918,13 @@ func (ind *MurreyMathLines) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *MurreyMathLines) Name() string {
+	r := C.GoString(C.wickra_murrey_math_lines_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *MurreyMathLines) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (MurreyMathLinesOutput, bool) {
@@ -21029,6 +22982,13 @@ func (ind *NakedPoc) WarmupPeriod() int {
 // emit a value.
 func (ind *NakedPoc) IsReady() bool {
 	r := bool(C.wickra_naked_poc_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *NakedPoc) Name() string {
+	r := C.GoString(C.wickra_naked_poc_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -21124,6 +23084,13 @@ func (ind *Natr) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Natr) Name() string {
+	r := C.GoString(C.wickra_natr_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Natr) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -21215,6 +23182,13 @@ func (ind *NewHighsNewLows) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *NewHighsNewLows) Name() string {
+	r := C.GoString(C.wickra_new_highs_new_lows_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *NewHighsNewLows) Update(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, timestamp int64) float64 {
@@ -21289,6 +23263,13 @@ func (ind *NewPriceLines) WarmupPeriod() int {
 // emit a value.
 func (ind *NewPriceLines) IsReady() bool {
 	r := bool(C.wickra_new_price_lines_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *NewPriceLines) Name() string {
+	r := C.GoString(C.wickra_new_price_lines_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -21384,6 +23365,13 @@ func (ind *Nrtr) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Nrtr) Name() string {
+	r := C.GoString(C.wickra_nrtr_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Nrtr) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (NrtrOutput, bool) {
@@ -21441,6 +23429,13 @@ func (ind *Nvi) WarmupPeriod() int {
 // emit a value.
 func (ind *Nvi) IsReady() bool {
 	r := bool(C.wickra_nvi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Nvi) Name() string {
+	r := C.GoString(C.wickra_nvi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -21536,6 +23531,13 @@ func (ind *Obv) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Obv) Name() string {
+	r := C.GoString(C.wickra_obv_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Obv) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -21627,6 +23629,13 @@ func (ind *OIPriceDivergence) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OIPriceDivergence) Name() string {
+	r := C.GoString(C.wickra_oi_price_divergence_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *OIPriceDivergence) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -21680,6 +23689,13 @@ func (ind *OiToVolumeRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *OiToVolumeRatio) IsReady() bool {
 	r := bool(C.wickra_oi_to_volume_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OiToVolumeRatio) Name() string {
+	r := C.GoString(C.wickra_oi_to_volume_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -21741,6 +23757,13 @@ func (ind *OIWeighted) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OIWeighted) Name() string {
+	r := C.GoString(C.wickra_oi_weighted_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *OIWeighted) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -21794,6 +23817,13 @@ func (ind *OmegaRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *OmegaRatio) IsReady() bool {
 	r := bool(C.wickra_omega_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OmegaRatio) Name() string {
+	r := C.GoString(C.wickra_omega_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -21865,6 +23895,13 @@ func (ind *OnNeck) WarmupPeriod() int {
 // emit a value.
 func (ind *OnNeck) IsReady() bool {
 	r := bool(C.wickra_on_neck_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OnNeck) Name() string {
+	r := C.GoString(C.wickra_on_neck_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -21960,6 +23997,13 @@ func (ind *OpenInterestDelta) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OpenInterestDelta) Name() string {
+	r := C.GoString(C.wickra_open_interest_delta_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *OpenInterestDelta) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -22017,6 +24061,13 @@ func (ind *OpenInterestMomentum) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OpenInterestMomentum) Name() string {
+	r := C.GoString(C.wickra_open_interest_momentum_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *OpenInterestMomentum) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -22070,6 +24121,13 @@ func (ind *OpeningMarubozu) WarmupPeriod() int {
 // emit a value.
 func (ind *OpeningMarubozu) IsReady() bool {
 	r := bool(C.wickra_opening_marubozu_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OpeningMarubozu) Name() string {
+	r := C.GoString(C.wickra_opening_marubozu_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22165,6 +24223,13 @@ func (ind *OpeningRange) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OpeningRange) Name() string {
+	r := C.GoString(C.wickra_opening_range_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *OpeningRange) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (OpeningRangeOutput, bool) {
@@ -22222,6 +24287,13 @@ func (ind *OrderBookImbalanceFull) WarmupPeriod() int {
 // emit a value.
 func (ind *OrderBookImbalanceFull) IsReady() bool {
 	r := bool(C.wickra_order_book_imbalance_full_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OrderBookImbalanceFull) Name() string {
+	r := C.GoString(C.wickra_order_book_imbalance_full_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22293,6 +24365,13 @@ func (ind *OrderBookImbalanceTop1) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OrderBookImbalanceTop1) Name() string {
+	r := C.GoString(C.wickra_order_book_imbalance_top1_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *OrderBookImbalanceTop1) Update(bidPrice []float64, bidSize []float64, askPrice []float64, askSize []float64) float64 {
@@ -22356,6 +24435,13 @@ func (ind *OrderBookImbalanceTopN) WarmupPeriod() int {
 // emit a value.
 func (ind *OrderBookImbalanceTopN) IsReady() bool {
 	r := bool(C.wickra_order_book_imbalance_top_n_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OrderBookImbalanceTopN) Name() string {
+	r := C.GoString(C.wickra_order_book_imbalance_top_n_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22427,6 +24513,13 @@ func (ind *OrderFlowImbalance) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OrderFlowImbalance) Name() string {
+	r := C.GoString(C.wickra_order_flow_imbalance_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one cross-sectional snapshot and returns the indicator
 // value (NaN until warmed up). Slices in a group must share a length.
 func (ind *OrderFlowImbalance) Update(bidPrice []float64, bidSize []float64, askPrice []float64, askSize []float64) float64 {
@@ -22490,6 +24583,13 @@ func (ind *OuHalfLife) WarmupPeriod() int {
 // emit a value.
 func (ind *OuHalfLife) IsReady() bool {
 	r := bool(C.wickra_ou_half_life_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OuHalfLife) Name() string {
+	r := C.GoString(C.wickra_ou_half_life_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22565,6 +24665,13 @@ func (ind *OvernightGap) WarmupPeriod() int {
 // emit a value.
 func (ind *OvernightGap) IsReady() bool {
 	r := bool(C.wickra_overnight_gap_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *OvernightGap) Name() string {
+	r := C.GoString(C.wickra_overnight_gap_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22660,6 +24767,13 @@ func (ind *OvernightIntradayReturn) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *OvernightIntradayReturn) Name() string {
+	r := C.GoString(C.wickra_overnight_intraday_return_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *OvernightIntradayReturn) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (OvernightIntradayReturnOutput, bool) {
@@ -22717,6 +24831,13 @@ func (ind *PainIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *PainIndex) IsReady() bool {
 	r := bool(C.wickra_pain_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PainIndex) Name() string {
+	r := C.GoString(C.wickra_pain_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22788,6 +24909,13 @@ func (ind *PairSpreadZScore) WarmupPeriod() int {
 // emit a value.
 func (ind *PairSpreadZScore) IsReady() bool {
 	r := bool(C.wickra_pair_spread_z_score_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PairSpreadZScore) Name() string {
+	r := C.GoString(C.wickra_pair_spread_z_score_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -22867,6 +24995,13 @@ func (ind *PairwiseBeta) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PairwiseBeta) Name() string {
+	r := C.GoString(C.wickra_pairwise_beta_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PairwiseBeta) Update(x float64, y float64) float64 {
@@ -22938,6 +25073,13 @@ func (ind *ParkinsonVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *ParkinsonVolatility) IsReady() bool {
 	r := bool(C.wickra_parkinson_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ParkinsonVolatility) Name() string {
+	r := C.GoString(C.wickra_parkinson_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -23033,6 +25175,13 @@ func (ind *PearsonCorrelation) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PearsonCorrelation) Name() string {
+	r := C.GoString(C.wickra_pearson_correlation_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PearsonCorrelation) Update(x float64, y float64) float64 {
@@ -23104,6 +25253,13 @@ func (ind *PercentAboveMa) WarmupPeriod() int {
 // emit a value.
 func (ind *PercentAboveMa) IsReady() bool {
 	r := bool(C.wickra_percent_above_ma_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PercentAboveMa) Name() string {
+	r := C.GoString(C.wickra_percent_above_ma_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -23186,6 +25342,13 @@ func (ind *PercentB) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PercentB) Name() string {
+	r := C.GoString(C.wickra_percent_b_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PercentB) Update(value float64) float64 {
@@ -23253,6 +25416,13 @@ func (ind *PercentageTrailingStop) WarmupPeriod() int {
 // emit a value.
 func (ind *PercentageTrailingStop) IsReady() bool {
 	r := bool(C.wickra_percentage_trailing_stop_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PercentageTrailingStop) Name() string {
+	r := C.GoString(C.wickra_percentage_trailing_stop_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -23328,6 +25498,13 @@ func (ind *PerpetualPremiumIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PerpetualPremiumIndex) Name() string {
+	r := C.GoString(C.wickra_perpetual_premium_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PerpetualPremiumIndex) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -23381,6 +25558,13 @@ func (ind *Pgo) WarmupPeriod() int {
 // emit a value.
 func (ind *Pgo) IsReady() bool {
 	r := bool(C.wickra_pgo_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Pgo) Name() string {
+	r := C.GoString(C.wickra_pgo_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -23476,6 +25660,13 @@ func (ind *PiercingDarkCloud) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PiercingDarkCloud) Name() string {
+	r := C.GoString(C.wickra_piercing_dark_cloud_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PiercingDarkCloud) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -23567,6 +25758,13 @@ func (ind *Pin) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Pin) Name() string {
+	r := C.GoString(C.wickra_pin_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Pin) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -23620,6 +25818,13 @@ func (ind *PivotReversal) WarmupPeriod() int {
 // emit a value.
 func (ind *PivotReversal) IsReady() bool {
 	r := bool(C.wickra_pivot_reversal_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PivotReversal) Name() string {
+	r := C.GoString(C.wickra_pivot_reversal_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -23715,6 +25920,13 @@ func (ind *PlusDi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PlusDi) Name() string {
+	r := C.GoString(C.wickra_plus_di_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PlusDi) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -23802,6 +26014,13 @@ func (ind *PlusDm) WarmupPeriod() int {
 // emit a value.
 func (ind *PlusDm) IsReady() bool {
 	r := bool(C.wickra_plus_dm_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PlusDm) Name() string {
+	r := C.GoString(C.wickra_plus_dm_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -23897,6 +26116,13 @@ func (ind *Pmo) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Pmo) Name() string {
+	r := C.GoString(C.wickra_pmo_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Pmo) Update(value float64) float64 {
@@ -23950,6 +26176,13 @@ func NewPointAndFigureBars(boxSize float64, reversal int) (*PointAndFigureBars, 
 	obj := &PointAndFigureBars{handle: ptr}
 	runtime.SetFinalizer(obj, (*PointAndFigureBars).Close)
 	return obj, nil
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PointAndFigureBars) Name() string {
+	r := C.GoString(C.wickra_point_and_figure_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
 }
 
 // Update feeds one candle and returns any bars completed by it
@@ -24014,6 +26247,13 @@ func (ind *PolarizedFractalEfficiency) WarmupPeriod() int {
 // emit a value.
 func (ind *PolarizedFractalEfficiency) IsReady() bool {
 	r := bool(C.wickra_polarized_fractal_efficiency_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *PolarizedFractalEfficiency) Name() string {
+	r := C.GoString(C.wickra_polarized_fractal_efficiency_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -24089,6 +26329,13 @@ func (ind *Ppo) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Ppo) Name() string {
+	r := C.GoString(C.wickra_ppo_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Ppo) Update(value float64) float64 {
@@ -24160,6 +26407,13 @@ func (ind *PpoHistogram) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *PpoHistogram) Name() string {
+	r := C.GoString(C.wickra_ppo_histogram_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *PpoHistogram) Update(value float64) float64 {
@@ -24227,6 +26481,13 @@ func (ind *ProfileShape) WarmupPeriod() int {
 // emit a value.
 func (ind *ProfileShape) IsReady() bool {
 	r := bool(C.wickra_profile_shape_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ProfileShape) Name() string {
+	r := C.GoString(C.wickra_profile_shape_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -24322,6 +26583,13 @@ func (ind *ProfitFactor) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ProfitFactor) Name() string {
+	r := C.GoString(C.wickra_profit_factor_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ProfitFactor) Update(value float64) float64 {
@@ -24393,6 +26661,13 @@ func (ind *ProjectionBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ProjectionBands) Name() string {
+	r := C.GoString(C.wickra_projection_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ProjectionBands) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ProjectionBandsOutput, bool) {
@@ -24450,6 +26725,13 @@ func (ind *ProjectionOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *ProjectionOscillator) IsReady() bool {
 	r := bool(C.wickra_projection_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ProjectionOscillator) Name() string {
+	r := C.GoString(C.wickra_projection_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -24545,6 +26827,13 @@ func (ind *Psar) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Psar) Name() string {
+	r := C.GoString(C.wickra_psar_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Psar) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -24632,6 +26921,13 @@ func (ind *Pvi) WarmupPeriod() int {
 // emit a value.
 func (ind *Pvi) IsReady() bool {
 	r := bool(C.wickra_pvi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Pvi) Name() string {
+	r := C.GoString(C.wickra_pvi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -24727,6 +27023,13 @@ func (ind *Qqe) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Qqe) Name() string {
+	r := C.GoString(C.wickra_qqe_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Qqe) Update(value float64) (QqeOutput, bool) {
@@ -24784,6 +27087,13 @@ func (ind *Qstick) WarmupPeriod() int {
 // emit a value.
 func (ind *Qstick) IsReady() bool {
 	r := bool(C.wickra_qstick_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Qstick) Name() string {
+	r := C.GoString(C.wickra_qstick_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -24879,6 +27189,13 @@ func (ind *QuartileBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *QuartileBands) Name() string {
+	r := C.GoString(C.wickra_quartile_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *QuartileBands) Update(value float64) (QuartileBandsOutput, bool) {
@@ -24936,6 +27253,13 @@ func (ind *QuotedSpread) WarmupPeriod() int {
 // emit a value.
 func (ind *QuotedSpread) IsReady() bool {
 	r := bool(C.wickra_quoted_spread_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *QuotedSpread) Name() string {
+	r := C.GoString(C.wickra_quoted_spread_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -25007,6 +27331,13 @@ func (ind *RSquared) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RSquared) Name() string {
+	r := C.GoString(C.wickra_r_squared_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RSquared) Update(value float64) float64 {
@@ -25060,6 +27391,13 @@ func NewRangeBars(range_ float64) (*RangeBars, error) {
 	obj := &RangeBars{handle: ptr}
 	runtime.SetFinalizer(obj, (*RangeBars).Close)
 	return obj, nil
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RangeBars) Name() string {
+	r := C.GoString(C.wickra_range_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
 }
 
 // Update feeds one candle and returns any bars completed by it
@@ -25128,6 +27466,13 @@ func (ind *RealizedSpread) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RealizedSpread) Name() string {
+	r := C.GoString(C.wickra_realized_spread_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RealizedSpread) Update(price float64, size float64, isBuy bool, timestamp int64, mid float64) float64 {
@@ -25181,6 +27526,13 @@ func (ind *RealizedVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *RealizedVolatility) IsReady() bool {
 	r := bool(C.wickra_realized_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RealizedVolatility) Name() string {
+	r := C.GoString(C.wickra_realized_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -25256,6 +27608,13 @@ func (ind *RecoveryFactor) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RecoveryFactor) Name() string {
+	r := C.GoString(C.wickra_recovery_factor_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RecoveryFactor) Update(value float64) float64 {
@@ -25323,6 +27682,13 @@ func (ind *RectangleRange) WarmupPeriod() int {
 // emit a value.
 func (ind *RectangleRange) IsReady() bool {
 	r := bool(C.wickra_rectangle_range_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RectangleRange) Name() string {
+	r := C.GoString(C.wickra_rectangle_range_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -25418,6 +27784,13 @@ func (ind *Reflex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Reflex) Name() string {
+	r := C.GoString(C.wickra_reflex_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Reflex) Update(value float64) float64 {
@@ -25485,6 +27858,13 @@ func (ind *RegimeLabel) WarmupPeriod() int {
 // emit a value.
 func (ind *RegimeLabel) IsReady() bool {
 	r := bool(C.wickra_regime_label_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RegimeLabel) Name() string {
+	r := C.GoString(C.wickra_regime_label_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -25560,6 +27940,13 @@ func (ind *RelativeStrengthAB) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RelativeStrengthAB) Name() string {
+	r := C.GoString(C.wickra_relative_strength_ab_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *RelativeStrengthAB) Update(x float64, y float64) (RelativeStrengthOutput, bool) {
@@ -25603,6 +27990,13 @@ func NewRenkoBars(boxSize float64) (*RenkoBars, error) {
 	obj := &RenkoBars{handle: ptr}
 	runtime.SetFinalizer(obj, (*RenkoBars).Close)
 	return obj, nil
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RenkoBars) Name() string {
+	r := C.GoString(C.wickra_renko_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
 }
 
 // Update feeds one candle and returns any bars completed by it
@@ -25671,6 +28065,13 @@ func (ind *RenkoTrailingStop) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RenkoTrailingStop) Name() string {
+	r := C.GoString(C.wickra_renko_trailing_stop_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RenkoTrailingStop) Update(value float64) float64 {
@@ -25709,6 +28110,56 @@ func (ind *RenkoTrailingStop) Close() {
 	}
 }
 
+// Resampler wraps the Resampler indicator over the Wickra C ABI.
+type Resampler struct {
+	handle *C.struct_Resampler
+}
+
+// NewResampler constructs a Resampler. It returns ErrInvalidParams when the
+// native constructor rejects the arguments.
+func NewResampler(timeframe int64) (*Resampler, error) {
+	ptr := C.wickra_resampler_new(C.int64_t(timeframe))
+	if ptr == nil {
+		return nil, ErrInvalidParams
+	}
+	obj := &Resampler{handle: ptr}
+	runtime.SetFinalizer(obj, (*Resampler).Close)
+	return obj, nil
+}
+
+// Update feeds one observation. The bool reports whether a value is
+// available yet (false during warmup).
+func (ind *Resampler) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (Candle, bool) {
+	var out C.struct_WickraCandle
+	ok := bool(C.wickra_resampler_update(ind.handle, C.double(open), C.double(high), C.double(low), C.double(close), C.double(volume), C.int64_t(timestamp), &out))
+	runtime.KeepAlive(ind)
+	if !ok {
+		return Candle{}, false
+	}
+	return Candle{float64(out.open), float64(out.high), float64(out.low), float64(out.close), float64(out.volume), int64(out.timestamp)}, true
+}
+
+// Flush emits the final, still-open candle (ok is false if none is pending).
+func (ind *Resampler) Flush() (Candle, bool) {
+	var out C.struct_WickraCandle
+	ok := bool(C.wickra_resampler_flush(ind.handle, &out))
+	runtime.KeepAlive(ind)
+	if !ok {
+		return Candle{}, false
+	}
+	return Candle{float64(out.open), float64(out.high), float64(out.low), float64(out.close), float64(out.volume), int64(out.timestamp)}, true
+}
+
+// Close frees the native handle. It is idempotent and safe to call
+// alongside the finalizer.
+func (ind *Resampler) Close() {
+	if ind.handle != nil {
+		C.wickra_resampler_free(ind.handle)
+		ind.handle = nil
+		runtime.SetFinalizer(ind, nil)
+	}
+}
+
 // RickshawMan wraps the RickshawMan indicator over the Wickra C ABI.
 type RickshawMan struct {
 	handle *C.struct_RickshawMan
@@ -25738,6 +28189,13 @@ func (ind *RickshawMan) WarmupPeriod() int {
 // emit a value.
 func (ind *RickshawMan) IsReady() bool {
 	r := bool(C.wickra_rickshaw_man_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RickshawMan) Name() string {
+	r := C.GoString(C.wickra_rickshaw_man_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -25833,6 +28291,13 @@ func (ind *RisingThreeMethods) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RisingThreeMethods) Name() string {
+	r := C.GoString(C.wickra_rising_three_methods_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RisingThreeMethods) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -25924,6 +28389,13 @@ func (ind *Rmi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Rmi) Name() string {
+	r := C.GoString(C.wickra_rmi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Rmi) Update(value float64) float64 {
@@ -25991,6 +28463,13 @@ func (ind *Roc) WarmupPeriod() int {
 // emit a value.
 func (ind *Roc) IsReady() bool {
 	r := bool(C.wickra_roc_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Roc) Name() string {
+	r := C.GoString(C.wickra_roc_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -26066,6 +28545,13 @@ func (ind *Rocp) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Rocp) Name() string {
+	r := C.GoString(C.wickra_rocp_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Rocp) Update(value float64) float64 {
@@ -26133,6 +28619,13 @@ func (ind *Rocr) WarmupPeriod() int {
 // emit a value.
 func (ind *Rocr) IsReady() bool {
 	r := bool(C.wickra_rocr_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Rocr) Name() string {
+	r := C.GoString(C.wickra_rocr_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -26208,6 +28701,13 @@ func (ind *Rocr100) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Rocr100) Name() string {
+	r := C.GoString(C.wickra_rocr100_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Rocr100) Update(value float64) float64 {
@@ -26275,6 +28775,13 @@ func (ind *RogersSatchellVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *RogersSatchellVolatility) IsReady() bool {
 	r := bool(C.wickra_rogers_satchell_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RogersSatchellVolatility) Name() string {
+	r := C.GoString(C.wickra_rogers_satchell_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -26370,6 +28877,13 @@ func (ind *RollMeasure) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RollMeasure) Name() string {
+	r := C.GoString(C.wickra_roll_measure_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RollMeasure) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -26423,6 +28937,13 @@ func (ind *RollingCorrelation) WarmupPeriod() int {
 // emit a value.
 func (ind *RollingCorrelation) IsReady() bool {
 	r := bool(C.wickra_rolling_correlation_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RollingCorrelation) Name() string {
+	r := C.GoString(C.wickra_rolling_correlation_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -26502,6 +29023,13 @@ func (ind *RollingCovariance) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RollingCovariance) Name() string {
+	r := C.GoString(C.wickra_rolling_covariance_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RollingCovariance) Update(x float64, y float64) float64 {
@@ -26577,6 +29105,13 @@ func (ind *RollingIqr) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RollingIqr) Name() string {
+	r := C.GoString(C.wickra_rolling_iqr_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RollingIqr) Update(value float64) float64 {
@@ -26644,6 +29179,13 @@ func (ind *RollingMinMaxScaler) WarmupPeriod() int {
 // emit a value.
 func (ind *RollingMinMaxScaler) IsReady() bool {
 	r := bool(C.wickra_rolling_min_max_scaler_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RollingMinMaxScaler) Name() string {
+	r := C.GoString(C.wickra_rolling_min_max_scaler_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -26719,6 +29261,13 @@ func (ind *RollingPercentileRank) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RollingPercentileRank) Name() string {
+	r := C.GoString(C.wickra_rolling_percentile_rank_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RollingPercentileRank) Update(value float64) float64 {
@@ -26790,6 +29339,13 @@ func (ind *RollingQuantile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RollingQuantile) Name() string {
+	r := C.GoString(C.wickra_rolling_quantile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RollingQuantile) Update(value float64) float64 {
@@ -26857,6 +29413,13 @@ func (ind *RollingVwap) WarmupPeriod() int {
 // emit a value.
 func (ind *RollingVwap) IsReady() bool {
 	r := bool(C.wickra_rolling_vwap_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RollingVwap) Name() string {
+	r := C.GoString(C.wickra_rolling_vwap_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -26952,6 +29515,13 @@ func (ind *RoofingFilter) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RoofingFilter) Name() string {
+	r := C.GoString(C.wickra_roofing_filter_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RoofingFilter) Update(value float64) float64 {
@@ -27019,6 +29589,13 @@ func (ind *Rsi) WarmupPeriod() int {
 // emit a value.
 func (ind *Rsi) IsReady() bool {
 	r := bool(C.wickra_rsi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Rsi) Name() string {
+	r := C.GoString(C.wickra_rsi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -27094,6 +29671,13 @@ func (ind *Rsx) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Rsx) Name() string {
+	r := C.GoString(C.wickra_rsx_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Rsx) Update(value float64) float64 {
@@ -27147,6 +29731,13 @@ func NewRunBars(runLength int) (*RunBars, error) {
 	obj := &RunBars{handle: ptr}
 	runtime.SetFinalizer(obj, (*RunBars).Close)
 	return obj, nil
+}
+
+// Name returns the indicator's canonical name.
+func (ind *RunBars) Name() string {
+	r := C.GoString(C.wickra_run_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
 }
 
 // Update feeds one candle and returns any bars completed by it
@@ -27211,6 +29802,13 @@ func (ind *Rvi) WarmupPeriod() int {
 // emit a value.
 func (ind *Rvi) IsReady() bool {
 	r := bool(C.wickra_rvi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Rvi) Name() string {
+	r := C.GoString(C.wickra_rvi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -27306,6 +29904,13 @@ func (ind *RviVolatility) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *RviVolatility) Name() string {
+	r := C.GoString(C.wickra_rvi_volatility_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *RviVolatility) Update(value float64) float64 {
@@ -27377,6 +29982,13 @@ func (ind *Rwi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Rwi) Name() string {
+	r := C.GoString(C.wickra_rwi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Rwi) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (RwiOutput, bool) {
@@ -27434,6 +30046,13 @@ func (ind *SampleEntropy) WarmupPeriod() int {
 // emit a value.
 func (ind *SampleEntropy) IsReady() bool {
 	r := bool(C.wickra_sample_entropy_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SampleEntropy) Name() string {
+	r := C.GoString(C.wickra_sample_entropy_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -27505,6 +30124,13 @@ func (ind *SarExt) WarmupPeriod() int {
 // emit a value.
 func (ind *SarExt) IsReady() bool {
 	r := bool(C.wickra_sar_ext_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SarExt) Name() string {
+	r := C.GoString(C.wickra_sar_ext_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -27600,6 +30226,13 @@ func (ind *SeasonalZScore) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SeasonalZScore) Name() string {
+	r := C.GoString(C.wickra_seasonal_z_score_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SeasonalZScore) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -27687,6 +30320,13 @@ func (ind *SeparatingLines) WarmupPeriod() int {
 // emit a value.
 func (ind *SeparatingLines) IsReady() bool {
 	r := bool(C.wickra_separating_lines_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SeparatingLines) Name() string {
+	r := C.GoString(C.wickra_separating_lines_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -27782,6 +30422,13 @@ func (ind *SessionHighLow) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SessionHighLow) Name() string {
+	r := C.GoString(C.wickra_session_high_low_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *SessionHighLow) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (SessionHighLowOutput, bool) {
@@ -27843,6 +30490,13 @@ func (ind *SessionRange) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SessionRange) Name() string {
+	r := C.GoString(C.wickra_session_range_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *SessionRange) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (SessionRangeOutput, bool) {
@@ -27900,6 +30554,13 @@ func (ind *SessionVwap) WarmupPeriod() int {
 // emit a value.
 func (ind *SessionVwap) IsReady() bool {
 	r := bool(C.wickra_session_vwap_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SessionVwap) Name() string {
+	r := C.GoString(C.wickra_session_vwap_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -27995,6 +30656,13 @@ func (ind *ShannonEntropy) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ShannonEntropy) Name() string {
+	r := C.GoString(C.wickra_shannon_entropy_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ShannonEntropy) Update(value float64) float64 {
@@ -28062,6 +30730,13 @@ func (ind *Shark) WarmupPeriod() int {
 // emit a value.
 func (ind *Shark) IsReady() bool {
 	r := bool(C.wickra_shark_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Shark) Name() string {
+	r := C.GoString(C.wickra_shark_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -28157,6 +30832,13 @@ func (ind *SharpeRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SharpeRatio) Name() string {
+	r := C.GoString(C.wickra_sharpe_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SharpeRatio) Update(value float64) float64 {
@@ -28224,6 +30906,13 @@ func (ind *ShootingStar) WarmupPeriod() int {
 // emit a value.
 func (ind *ShootingStar) IsReady() bool {
 	r := bool(C.wickra_shooting_star_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ShootingStar) Name() string {
+	r := C.GoString(C.wickra_shooting_star_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -28319,6 +31008,13 @@ func (ind *ShortLine) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ShortLine) Name() string {
+	r := C.GoString(C.wickra_short_line_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ShortLine) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -28410,6 +31106,13 @@ func (ind *SignedVolume) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SignedVolume) Name() string {
+	r := C.GoString(C.wickra_signed_volume_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SignedVolume) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -28463,6 +31166,13 @@ func (ind *SineWave) WarmupPeriod() int {
 // emit a value.
 func (ind *SineWave) IsReady() bool {
 	r := bool(C.wickra_sine_wave_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SineWave) Name() string {
+	r := C.GoString(C.wickra_sine_wave_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -28538,6 +31248,13 @@ func (ind *SineWeightedMa) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SineWeightedMa) Name() string {
+	r := C.GoString(C.wickra_sine_weighted_ma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SineWeightedMa) Update(value float64) float64 {
@@ -28605,6 +31322,13 @@ func (ind *SinglePrints) WarmupPeriod() int {
 // emit a value.
 func (ind *SinglePrints) IsReady() bool {
 	r := bool(C.wickra_single_prints_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SinglePrints) Name() string {
+	r := C.GoString(C.wickra_single_prints_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -28700,6 +31424,13 @@ func (ind *Skewness) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Skewness) Name() string {
+	r := C.GoString(C.wickra_skewness_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Skewness) Update(value float64) float64 {
@@ -28771,6 +31502,13 @@ func (ind *Sma) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Sma) Name() string {
+	r := C.GoString(C.wickra_sma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Sma) Update(value float64) float64 {
@@ -28838,6 +31576,13 @@ func (ind *Smi) WarmupPeriod() int {
 // emit a value.
 func (ind *Smi) IsReady() bool {
 	r := bool(C.wickra_smi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Smi) Name() string {
+	r := C.GoString(C.wickra_smi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -28933,6 +31678,13 @@ func (ind *Smma) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Smma) Name() string {
+	r := C.GoString(C.wickra_smma_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Smma) Update(value float64) float64 {
@@ -29004,6 +31756,13 @@ func (ind *SmoothedHeikinAshi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SmoothedHeikinAshi) Name() string {
+	r := C.GoString(C.wickra_smoothed_heikin_ashi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *SmoothedHeikinAshi) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (SmoothedHeikinAshiOutput, bool) {
@@ -29061,6 +31820,13 @@ func (ind *SortinoRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *SortinoRatio) IsReady() bool {
 	r := bool(C.wickra_sortino_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SortinoRatio) Name() string {
+	r := C.GoString(C.wickra_sortino_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -29136,6 +31902,13 @@ func (ind *SpearmanCorrelation) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SpearmanCorrelation) Name() string {
+	r := C.GoString(C.wickra_spearman_correlation_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SpearmanCorrelation) Update(x float64, y float64) float64 {
@@ -29207,6 +31980,13 @@ func (ind *SpinningTop) WarmupPeriod() int {
 // emit a value.
 func (ind *SpinningTop) IsReady() bool {
 	r := bool(C.wickra_spinning_top_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SpinningTop) Name() string {
+	r := C.GoString(C.wickra_spinning_top_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -29302,6 +32082,13 @@ func (ind *SpreadAr1Coefficient) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SpreadAr1Coefficient) Name() string {
+	r := C.GoString(C.wickra_spread_ar1_coefficient_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SpreadAr1Coefficient) Update(x float64, y float64) float64 {
@@ -29377,6 +32164,13 @@ func (ind *SpreadBollingerBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SpreadBollingerBands) Name() string {
+	r := C.GoString(C.wickra_spread_bollinger_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *SpreadBollingerBands) Update(x float64, y float64) (SpreadBollingerBandsOutput, bool) {
@@ -29434,6 +32228,13 @@ func (ind *SpreadHurst) WarmupPeriod() int {
 // emit a value.
 func (ind *SpreadHurst) IsReady() bool {
 	r := bool(C.wickra_spread_hurst_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *SpreadHurst) Name() string {
+	r := C.GoString(C.wickra_spread_hurst_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -29509,6 +32310,13 @@ func (ind *StalledPattern) WarmupPeriod() int {
 // emit a value.
 func (ind *StalledPattern) IsReady() bool {
 	r := bool(C.wickra_stalled_pattern_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *StalledPattern) Name() string {
+	r := C.GoString(C.wickra_stalled_pattern_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -29604,6 +32412,13 @@ func (ind *StandardError) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *StandardError) Name() string {
+	r := C.GoString(C.wickra_standard_error_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *StandardError) Update(value float64) float64 {
@@ -29675,6 +32490,13 @@ func (ind *StandardErrorBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *StandardErrorBands) Name() string {
+	r := C.GoString(C.wickra_standard_error_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *StandardErrorBands) Update(value float64) (StandardErrorBandsOutput, bool) {
@@ -29736,6 +32558,13 @@ func (ind *StarcBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *StarcBands) Name() string {
+	r := C.GoString(C.wickra_starc_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *StarcBands) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (StarcBandsOutput, bool) {
@@ -29793,6 +32622,13 @@ func (ind *Stc) WarmupPeriod() int {
 // emit a value.
 func (ind *Stc) IsReady() bool {
 	r := bool(C.wickra_stc_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Stc) Name() string {
+	r := C.GoString(C.wickra_stc_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -29868,6 +32704,13 @@ func (ind *StdDev) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *StdDev) Name() string {
+	r := C.GoString(C.wickra_std_dev_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *StdDev) Update(value float64) float64 {
@@ -29935,6 +32778,13 @@ func (ind *StepTrailingStop) WarmupPeriod() int {
 // emit a value.
 func (ind *StepTrailingStop) IsReady() bool {
 	r := bool(C.wickra_step_trailing_stop_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *StepTrailingStop) Name() string {
+	r := C.GoString(C.wickra_step_trailing_stop_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -30010,6 +32860,13 @@ func (ind *SterlingRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SterlingRatio) Name() string {
+	r := C.GoString(C.wickra_sterling_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SterlingRatio) Update(value float64) float64 {
@@ -30077,6 +32934,13 @@ func (ind *StickSandwich) WarmupPeriod() int {
 // emit a value.
 func (ind *StickSandwich) IsReady() bool {
 	r := bool(C.wickra_stick_sandwich_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *StickSandwich) Name() string {
+	r := C.GoString(C.wickra_stick_sandwich_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -30172,6 +33036,13 @@ func (ind *StochRsi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *StochRsi) Name() string {
+	r := C.GoString(C.wickra_stoch_rsi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *StochRsi) Update(value float64) float64 {
@@ -30243,6 +33114,13 @@ func (ind *Stochastic) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Stochastic) Name() string {
+	r := C.GoString(C.wickra_stochastic_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Stochastic) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (StochasticOutput, bool) {
@@ -30300,6 +33178,13 @@ func (ind *StochasticCci) WarmupPeriod() int {
 // emit a value.
 func (ind *StochasticCci) IsReady() bool {
 	r := bool(C.wickra_stochastic_cci_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *StochasticCci) Name() string {
+	r := C.GoString(C.wickra_stochastic_cci_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -30395,6 +33280,13 @@ func (ind *SuperSmoother) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SuperSmoother) Name() string {
+	r := C.GoString(C.wickra_super_smoother_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *SuperSmoother) Update(value float64) float64 {
@@ -30466,6 +33358,13 @@ func (ind *SuperTrend) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *SuperTrend) Name() string {
+	r := C.GoString(C.wickra_super_trend_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *SuperTrend) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (SuperTrendOutput, bool) {
@@ -30523,6 +33422,13 @@ func (ind *T3) WarmupPeriod() int {
 // emit a value.
 func (ind *T3) IsReady() bool {
 	r := bool(C.wickra_t3_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *T3) Name() string {
+	r := C.GoString(C.wickra_t3_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -30598,6 +33504,13 @@ func (ind *TailRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TailRatio) Name() string {
+	r := C.GoString(C.wickra_tail_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TailRatio) Update(value float64) float64 {
@@ -30669,6 +33582,13 @@ func (ind *TakerBuySellRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TakerBuySellRatio) Name() string {
+	r := C.GoString(C.wickra_taker_buy_sell_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TakerBuySellRatio) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -30722,6 +33642,13 @@ func (ind *Takuri) WarmupPeriod() int {
 // emit a value.
 func (ind *Takuri) IsReady() bool {
 	r := bool(C.wickra_takuri_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Takuri) Name() string {
+	r := C.GoString(C.wickra_takuri_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -30817,6 +33744,13 @@ func (ind *TasukiGap) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TasukiGap) Name() string {
+	r := C.GoString(C.wickra_tasuki_gap_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TasukiGap) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -30904,6 +33838,13 @@ func (ind *TdCamouflage) WarmupPeriod() int {
 // emit a value.
 func (ind *TdCamouflage) IsReady() bool {
 	r := bool(C.wickra_td_camouflage_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdCamouflage) Name() string {
+	r := C.GoString(C.wickra_td_camouflage_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -30999,6 +33940,13 @@ func (ind *TdClop) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdClop) Name() string {
+	r := C.GoString(C.wickra_td_clop_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TdClop) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -31086,6 +34034,13 @@ func (ind *TdClopwin) WarmupPeriod() int {
 // emit a value.
 func (ind *TdClopwin) IsReady() bool {
 	r := bool(C.wickra_td_clopwin_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdClopwin) Name() string {
+	r := C.GoString(C.wickra_td_clopwin_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -31181,6 +34136,13 @@ func (ind *TdCombo) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdCombo) Name() string {
+	r := C.GoString(C.wickra_td_combo_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TdCombo) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -31268,6 +34230,13 @@ func (ind *TdCountdown) WarmupPeriod() int {
 // emit a value.
 func (ind *TdCountdown) IsReady() bool {
 	r := bool(C.wickra_td_countdown_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdCountdown) Name() string {
+	r := C.GoString(C.wickra_td_countdown_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -31363,6 +34332,13 @@ func (ind *TdDWave) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdDWave) Name() string {
+	r := C.GoString(C.wickra_td_d_wave_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TdDWave) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -31450,6 +34426,13 @@ func (ind *TdDeMarker) WarmupPeriod() int {
 // emit a value.
 func (ind *TdDeMarker) IsReady() bool {
 	r := bool(C.wickra_td_de_marker_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdDeMarker) Name() string {
+	r := C.GoString(C.wickra_td_de_marker_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -31545,6 +34528,13 @@ func (ind *TdDifferential) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdDifferential) Name() string {
+	r := C.GoString(C.wickra_td_differential_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TdDifferential) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -31636,6 +34626,13 @@ func (ind *TdLines) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdLines) Name() string {
+	r := C.GoString(C.wickra_td_lines_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *TdLines) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TdLinesOutput, bool) {
@@ -31697,6 +34694,13 @@ func (ind *TdMovingAverage) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdMovingAverage) Name() string {
+	r := C.GoString(C.wickra_td_moving_average_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *TdMovingAverage) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TdMovingAverageOutput, bool) {
@@ -31754,6 +34758,13 @@ func (ind *TdOpen) WarmupPeriod() int {
 // emit a value.
 func (ind *TdOpen) IsReady() bool {
 	r := bool(C.wickra_td_open_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdOpen) Name() string {
+	r := C.GoString(C.wickra_td_open_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -31849,6 +34860,13 @@ func (ind *TdPressure) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdPressure) Name() string {
+	r := C.GoString(C.wickra_td_pressure_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TdPressure) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -31936,6 +34954,13 @@ func (ind *TdPropulsion) WarmupPeriod() int {
 // emit a value.
 func (ind *TdPropulsion) IsReady() bool {
 	r := bool(C.wickra_td_propulsion_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdPropulsion) Name() string {
+	r := C.GoString(C.wickra_td_propulsion_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -32031,6 +35056,13 @@ func (ind *TdRangeProjection) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdRangeProjection) Name() string {
+	r := C.GoString(C.wickra_td_range_projection_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *TdRangeProjection) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TdRangeProjectionOutput, bool) {
@@ -32088,6 +35120,13 @@ func (ind *TdRei) WarmupPeriod() int {
 // emit a value.
 func (ind *TdRei) IsReady() bool {
 	r := bool(C.wickra_td_rei_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdRei) Name() string {
+	r := C.GoString(C.wickra_td_rei_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -32183,6 +35222,13 @@ func (ind *TdRiskLevel) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdRiskLevel) Name() string {
+	r := C.GoString(C.wickra_td_risk_level_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *TdRiskLevel) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TdRiskLevelOutput, bool) {
@@ -32244,6 +35290,13 @@ func (ind *TdSequential) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdSequential) Name() string {
+	r := C.GoString(C.wickra_td_sequential_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *TdSequential) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TdSequentialOutput, bool) {
@@ -32301,6 +35354,13 @@ func (ind *TdSetup) WarmupPeriod() int {
 // emit a value.
 func (ind *TdSetup) IsReady() bool {
 	r := bool(C.wickra_td_setup_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TdSetup) Name() string {
+	r := C.GoString(C.wickra_td_setup_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -32396,6 +35456,13 @@ func (ind *TdTrap) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TdTrap) Name() string {
+	r := C.GoString(C.wickra_td_trap_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TdTrap) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -32487,6 +35554,13 @@ func (ind *Tema) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Tema) Name() string {
+	r := C.GoString(C.wickra_tema_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Tema) Update(value float64) float64 {
@@ -32558,6 +35632,13 @@ func (ind *TermStructureBasis) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TermStructureBasis) Name() string {
+	r := C.GoString(C.wickra_term_structure_basis_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TermStructureBasis) Update(fundingRate float64, markPrice float64, indexPrice float64, futuresPrice float64, openInterest float64, longSize float64, shortSize float64, takerBuyVolume float64, takerSellVolume float64, longLiquidation float64, shortLiquidation float64, timestamp int64) float64 {
@@ -32611,6 +35692,13 @@ func (ind *ThreeDrives) WarmupPeriod() int {
 // emit a value.
 func (ind *ThreeDrives) IsReady() bool {
 	r := bool(C.wickra_three_drives_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ThreeDrives) Name() string {
+	r := C.GoString(C.wickra_three_drives_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -32706,6 +35794,13 @@ func (ind *ThreeInside) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ThreeInside) Name() string {
+	r := C.GoString(C.wickra_three_inside_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ThreeInside) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -32797,6 +35892,13 @@ func (ind *ThreeLineBreak) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ThreeLineBreak) Name() string {
+	r := C.GoString(C.wickra_three_line_break_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ThreeLineBreak) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -32872,6 +35974,13 @@ func NewThreeLineBreakBars(lines int) (*ThreeLineBreakBars, error) {
 	return obj, nil
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ThreeLineBreakBars) Name() string {
+	r := C.GoString(C.wickra_three_line_break_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one candle and returns any bars completed by it
 // (a single candle may complete several).
 func (ind *ThreeLineBreakBars) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) []LineBreakBar {
@@ -32934,6 +36043,13 @@ func (ind *ThreeLineStrike) WarmupPeriod() int {
 // emit a value.
 func (ind *ThreeLineStrike) IsReady() bool {
 	r := bool(C.wickra_three_line_strike_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ThreeLineStrike) Name() string {
+	r := C.GoString(C.wickra_three_line_strike_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -33029,6 +36145,13 @@ func (ind *ThreeOutside) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ThreeOutside) Name() string {
+	r := C.GoString(C.wickra_three_outside_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ThreeOutside) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -33116,6 +36239,13 @@ func (ind *ThreeSoldiersOrCrows) WarmupPeriod() int {
 // emit a value.
 func (ind *ThreeSoldiersOrCrows) IsReady() bool {
 	r := bool(C.wickra_three_soldiers_or_crows_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ThreeSoldiersOrCrows) Name() string {
+	r := C.GoString(C.wickra_three_soldiers_or_crows_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -33211,6 +36341,13 @@ func (ind *ThreeStarsInSouth) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ThreeStarsInSouth) Name() string {
+	r := C.GoString(C.wickra_three_stars_in_south_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ThreeStarsInSouth) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -33302,6 +36439,13 @@ func (ind *Thrusting) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Thrusting) Name() string {
+	r := C.GoString(C.wickra_thrusting_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Thrusting) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -33360,6 +36504,51 @@ func (ind *Thrusting) Close() {
 	}
 }
 
+// TickAggregator wraps the TickAggregator indicator over the Wickra C ABI.
+type TickAggregator struct {
+	handle *C.struct_TickAggregator
+}
+
+// NewTickAggregator constructs a TickAggregator. It returns ErrInvalidParams when the
+// native constructor rejects the arguments.
+func NewTickAggregator(bucket int64, gapFill bool) (*TickAggregator, error) {
+	ptr := C.wickra_tick_aggregator_new(C.int64_t(bucket), C.bool(gapFill))
+	if ptr == nil {
+		return nil, ErrInvalidParams
+	}
+	obj := &TickAggregator{handle: ptr}
+	runtime.SetFinalizer(obj, (*TickAggregator).Close)
+	return obj, nil
+}
+
+// Push feeds one trade tick and returns the candles it closed (none while
+// the open bar grows, one per closed bucket, plus gap-fill placeholders).
+func (ind *TickAggregator) Push(price float64, size float64, timestamp int64) []Candle {
+	n := int(C.wickra_tick_aggregator_push(ind.handle, C.double(price), C.double(size), C.int64_t(timestamp)))
+	runtime.KeepAlive(ind)
+	if n <= 0 {
+		return nil
+	}
+	buf := make([]C.struct_WickraCandle, n)
+	C.wickra_tick_aggregator_drain(ind.handle, &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	out := make([]Candle, n)
+	for i := 0; i < n; i++ {
+		out[i] = Candle{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume), int64(buf[i].timestamp)}
+	}
+	return out
+}
+
+// Close frees the native handle. It is idempotent and safe to call
+// alongside the finalizer.
+func (ind *TickAggregator) Close() {
+	if ind.handle != nil {
+		C.wickra_tick_aggregator_free(ind.handle)
+		ind.handle = nil
+		runtime.SetFinalizer(ind, nil)
+	}
+}
+
 // TickBars wraps the TickBars indicator over the Wickra C ABI.
 type TickBars struct {
 	handle *C.struct_TickBars
@@ -33375,6 +36564,13 @@ func NewTickBars(ticks int) (*TickBars, error) {
 	obj := &TickBars{handle: ptr}
 	runtime.SetFinalizer(obj, (*TickBars).Close)
 	return obj, nil
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TickBars) Name() string {
+	r := C.GoString(C.wickra_tick_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
 }
 
 // Update feeds one candle and returns any bars completed by it
@@ -33439,6 +36635,13 @@ func (ind *TickIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *TickIndex) IsReady() bool {
 	r := bool(C.wickra_tick_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TickIndex) Name() string {
+	r := C.GoString(C.wickra_tick_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -33521,6 +36724,13 @@ func (ind *Tii) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Tii) Name() string {
+	r := C.GoString(C.wickra_tii_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Tii) Update(value float64) float64 {
@@ -33588,6 +36798,13 @@ func (ind *TimeBasedStop) WarmupPeriod() int {
 // emit a value.
 func (ind *TimeBasedStop) IsReady() bool {
 	r := bool(C.wickra_time_based_stop_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TimeBasedStop) Name() string {
+	r := C.GoString(C.wickra_time_based_stop_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -33685,6 +36902,13 @@ func (ind *TimeOfDayReturnProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TimeOfDayReturnProfile) Name() string {
+	r := C.GoString(C.wickra_time_of_day_return_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the profile values
 // (ok is false during warmup).
 func (ind *TimeOfDayReturnProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) ([]float64, bool) {
@@ -33742,6 +36966,13 @@ func (ind *TowerTopBottom) WarmupPeriod() int {
 // emit a value.
 func (ind *TowerTopBottom) IsReady() bool {
 	r := bool(C.wickra_tower_top_bottom_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TowerTopBottom) Name() string {
+	r := C.GoString(C.wickra_tower_top_bottom_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -33839,6 +37070,13 @@ func (ind *TpoProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TpoProfile) Name() string {
+	r := C.GoString(C.wickra_tpo_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the profile snapshot
 // (ok is false during warmup).
 func (ind *TpoProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TpoProfileOutputScalars, bool) {
@@ -33901,6 +37139,13 @@ func (ind *TradeImbalance) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TradeImbalance) Name() string {
+	r := C.GoString(C.wickra_trade_imbalance_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TradeImbalance) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -33958,6 +37203,13 @@ func (ind *TradeSignAutocorrelation) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TradeSignAutocorrelation) Name() string {
+	r := C.GoString(C.wickra_trade_sign_autocorrelation_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TradeSignAutocorrelation) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -34011,6 +37263,13 @@ func (ind *TradeVolumeIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *TradeVolumeIndex) IsReady() bool {
 	r := bool(C.wickra_trade_volume_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TradeVolumeIndex) Name() string {
+	r := C.GoString(C.wickra_trade_volume_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34106,6 +37365,13 @@ func (ind *TrendLabel) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TrendLabel) Name() string {
+	r := C.GoString(C.wickra_trend_label_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TrendLabel) Update(value float64) float64 {
@@ -34173,6 +37439,13 @@ func (ind *TrendStrengthIndex) WarmupPeriod() int {
 // emit a value.
 func (ind *TrendStrengthIndex) IsReady() bool {
 	r := bool(C.wickra_trend_strength_index_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TrendStrengthIndex) Name() string {
+	r := C.GoString(C.wickra_trend_strength_index_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34248,6 +37521,13 @@ func (ind *Trendflex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Trendflex) Name() string {
+	r := C.GoString(C.wickra_trendflex_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Trendflex) Update(value float64) float64 {
@@ -34315,6 +37595,13 @@ func (ind *TreynorRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *TreynorRatio) IsReady() bool {
 	r := bool(C.wickra_treynor_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TreynorRatio) Name() string {
+	r := C.GoString(C.wickra_treynor_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34390,6 +37677,13 @@ func (ind *Triangle) WarmupPeriod() int {
 // emit a value.
 func (ind *Triangle) IsReady() bool {
 	r := bool(C.wickra_triangle_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Triangle) Name() string {
+	r := C.GoString(C.wickra_triangle_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34485,6 +37779,13 @@ func (ind *Trima) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Trima) Name() string {
+	r := C.GoString(C.wickra_trima_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Trima) Update(value float64) float64 {
@@ -34552,6 +37853,13 @@ func (ind *Trin) WarmupPeriod() int {
 // emit a value.
 func (ind *Trin) IsReady() bool {
 	r := bool(C.wickra_trin_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Trin) Name() string {
+	r := C.GoString(C.wickra_trin_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34630,6 +37938,13 @@ func (ind *TripleTopBottom) WarmupPeriod() int {
 // emit a value.
 func (ind *TripleTopBottom) IsReady() bool {
 	r := bool(C.wickra_triple_top_bottom_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TripleTopBottom) Name() string {
+	r := C.GoString(C.wickra_triple_top_bottom_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34725,6 +38040,13 @@ func (ind *Tristar) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Tristar) Name() string {
+	r := C.GoString(C.wickra_tristar_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Tristar) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -34816,6 +38138,13 @@ func (ind *Trix) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Trix) Name() string {
+	r := C.GoString(C.wickra_trix_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Trix) Update(value float64) float64 {
@@ -34883,6 +38212,13 @@ func (ind *TrueRange) WarmupPeriod() int {
 // emit a value.
 func (ind *TrueRange) IsReady() bool {
 	r := bool(C.wickra_true_range_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TrueRange) Name() string {
+	r := C.GoString(C.wickra_true_range_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -34978,6 +38314,13 @@ func (ind *Tsf) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Tsf) Name() string {
+	r := C.GoString(C.wickra_tsf_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Tsf) Update(value float64) float64 {
@@ -35045,6 +38388,13 @@ func (ind *TsfOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *TsfOscillator) IsReady() bool {
 	r := bool(C.wickra_tsf_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TsfOscillator) Name() string {
+	r := C.GoString(C.wickra_tsf_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -35120,6 +38470,13 @@ func (ind *Tsi) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Tsi) Name() string {
+	r := C.GoString(C.wickra_tsi_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Tsi) Update(value float64) float64 {
@@ -35187,6 +38544,13 @@ func (ind *Tsv) WarmupPeriod() int {
 // emit a value.
 func (ind *Tsv) IsReady() bool {
 	r := bool(C.wickra_tsv_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Tsv) Name() string {
+	r := C.GoString(C.wickra_tsv_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -35282,6 +38646,13 @@ func (ind *TtmSqueeze) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TtmSqueeze) Name() string {
+	r := C.GoString(C.wickra_ttm_squeeze_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *TtmSqueeze) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (TtmSqueezeOutput, bool) {
@@ -35339,6 +38710,13 @@ func (ind *TtmTrend) WarmupPeriod() int {
 // emit a value.
 func (ind *TtmTrend) IsReady() bool {
 	r := bool(C.wickra_ttm_trend_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TtmTrend) Name() string {
+	r := C.GoString(C.wickra_ttm_trend_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -35434,6 +38812,13 @@ func (ind *TurnOfMonth) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TurnOfMonth) Name() string {
+	r := C.GoString(C.wickra_turn_of_month_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TurnOfMonth) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -35521,6 +38906,13 @@ func (ind *Tweezer) WarmupPeriod() int {
 // emit a value.
 func (ind *Tweezer) IsReady() bool {
 	r := bool(C.wickra_tweezer_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Tweezer) Name() string {
+	r := C.GoString(C.wickra_tweezer_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -35616,6 +39008,13 @@ func (ind *TwiggsMoneyFlow) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TwiggsMoneyFlow) Name() string {
+	r := C.GoString(C.wickra_twiggs_money_flow_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TwiggsMoneyFlow) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -35703,6 +39102,13 @@ func (ind *TwoCrows) WarmupPeriod() int {
 // emit a value.
 func (ind *TwoCrows) IsReady() bool {
 	r := bool(C.wickra_two_crows_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *TwoCrows) Name() string {
+	r := C.GoString(C.wickra_two_crows_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -35798,6 +39204,13 @@ func (ind *TypicalPrice) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *TypicalPrice) Name() string {
+	r := C.GoString(C.wickra_typical_price_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *TypicalPrice) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -35889,6 +39302,13 @@ func (ind *UlcerIndex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *UlcerIndex) Name() string {
+	r := C.GoString(C.wickra_ulcer_index_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *UlcerIndex) Update(value float64) float64 {
@@ -35956,6 +39376,13 @@ func (ind *UltimateOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *UltimateOscillator) IsReady() bool {
 	r := bool(C.wickra_ultimate_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *UltimateOscillator) Name() string {
+	r := C.GoString(C.wickra_ultimate_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -36051,6 +39478,13 @@ func (ind *UniqueThreeRiver) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *UniqueThreeRiver) Name() string {
+	r := C.GoString(C.wickra_unique_three_river_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *UniqueThreeRiver) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -36142,6 +39576,13 @@ func (ind *UniversalOscillator) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *UniversalOscillator) Name() string {
+	r := C.GoString(C.wickra_universal_oscillator_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *UniversalOscillator) Update(value float64) float64 {
@@ -36209,6 +39650,13 @@ func (ind *UpDownVolumeRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *UpDownVolumeRatio) IsReady() bool {
 	r := bool(C.wickra_up_down_volume_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *UpDownVolumeRatio) Name() string {
+	r := C.GoString(C.wickra_up_down_volume_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -36287,6 +39735,13 @@ func (ind *UpsideGapThreeMethods) WarmupPeriod() int {
 // emit a value.
 func (ind *UpsideGapThreeMethods) IsReady() bool {
 	r := bool(C.wickra_upside_gap_three_methods_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *UpsideGapThreeMethods) Name() string {
+	r := C.GoString(C.wickra_upside_gap_three_methods_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -36382,6 +39837,13 @@ func (ind *UpsideGapTwoCrows) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *UpsideGapTwoCrows) Name() string {
+	r := C.GoString(C.wickra_upside_gap_two_crows_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *UpsideGapTwoCrows) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -36473,6 +39935,13 @@ func (ind *UpsidePotentialRatio) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *UpsidePotentialRatio) Name() string {
+	r := C.GoString(C.wickra_upside_potential_ratio_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *UpsidePotentialRatio) Update(value float64) float64 {
@@ -36544,6 +40013,13 @@ func (ind *ValueArea) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ValueArea) Name() string {
+	r := C.GoString(C.wickra_value_area_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ValueArea) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (ValueAreaOutput, bool) {
@@ -36601,6 +40077,13 @@ func (ind *ValueAtRisk) WarmupPeriod() int {
 // emit a value.
 func (ind *ValueAtRisk) IsReady() bool {
 	r := bool(C.wickra_value_at_risk_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ValueAtRisk) Name() string {
+	r := C.GoString(C.wickra_value_at_risk_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -36676,6 +40159,13 @@ func (ind *Variance) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Variance) Name() string {
+	r := C.GoString(C.wickra_variance_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Variance) Update(value float64) float64 {
@@ -36743,6 +40233,13 @@ func (ind *VarianceRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *VarianceRatio) IsReady() bool {
 	r := bool(C.wickra_variance_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VarianceRatio) Name() string {
+	r := C.GoString(C.wickra_variance_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -36822,6 +40319,13 @@ func (ind *VerticalHorizontalFilter) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VerticalHorizontalFilter) Name() string {
+	r := C.GoString(C.wickra_vertical_horizontal_filter_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *VerticalHorizontalFilter) Update(value float64) float64 {
@@ -36889,6 +40393,13 @@ func (ind *Vidya) WarmupPeriod() int {
 // emit a value.
 func (ind *Vidya) IsReady() bool {
 	r := bool(C.wickra_vidya_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Vidya) Name() string {
+	r := C.GoString(C.wickra_vidya_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -36964,6 +40475,13 @@ func (ind *VolatilityCone) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VolatilityCone) Name() string {
+	r := C.GoString(C.wickra_volatility_cone_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *VolatilityCone) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (VolatilityConeOutput, bool) {
@@ -37021,6 +40539,13 @@ func (ind *VolatilityOfVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *VolatilityOfVolatility) IsReady() bool {
 	r := bool(C.wickra_volatility_of_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VolatilityOfVolatility) Name() string {
+	r := C.GoString(C.wickra_volatility_of_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -37092,6 +40617,13 @@ func (ind *VolatilityRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *VolatilityRatio) IsReady() bool {
 	r := bool(C.wickra_volatility_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VolatilityRatio) Name() string {
+	r := C.GoString(C.wickra_volatility_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -37187,6 +40719,13 @@ func (ind *VoltyStop) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VoltyStop) Name() string {
+	r := C.GoString(C.wickra_volty_stop_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *VoltyStop) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -37262,6 +40801,13 @@ func NewVolumeBars(volumePerBar float64) (*VolumeBars, error) {
 	return obj, nil
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VolumeBars) Name() string {
+	r := C.GoString(C.wickra_volume_bars_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one candle and returns any bars completed by it
 // (a single candle may complete several).
 func (ind *VolumeBars) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) []VolumeBar {
@@ -37330,6 +40876,13 @@ func (ind *VolumeByTimeProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VolumeByTimeProfile) Name() string {
+	r := C.GoString(C.wickra_volume_by_time_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the profile values
 // (ok is false during warmup).
 func (ind *VolumeByTimeProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) ([]float64, bool) {
@@ -37387,6 +40940,13 @@ func (ind *VolumeOscillator) WarmupPeriod() int {
 // emit a value.
 func (ind *VolumeOscillator) IsReady() bool {
 	r := bool(C.wickra_volume_oscillator_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VolumeOscillator) Name() string {
+	r := C.GoString(C.wickra_volume_oscillator_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -37478,6 +41038,13 @@ func (ind *VolumePriceTrend) WarmupPeriod() int {
 // emit a value.
 func (ind *VolumePriceTrend) IsReady() bool {
 	r := bool(C.wickra_volume_price_trend_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VolumePriceTrend) Name() string {
+	r := C.GoString(C.wickra_volume_price_trend_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -37575,6 +41142,13 @@ func (ind *VolumeProfile) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VolumeProfile) Name() string {
+	r := C.GoString(C.wickra_volume_profile_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the profile snapshot
 // (ok is false during warmup).
 func (ind *VolumeProfile) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (VolumeProfileOutputScalars, bool) {
@@ -37633,6 +41207,13 @@ func (ind *VolumeRsi) WarmupPeriod() int {
 // emit a value.
 func (ind *VolumeRsi) IsReady() bool {
 	r := bool(C.wickra_volume_rsi_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VolumeRsi) Name() string {
+	r := C.GoString(C.wickra_volume_rsi_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -37728,6 +41309,13 @@ func (ind *VolumeWeightedMacd) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VolumeWeightedMacd) Name() string {
+	r := C.GoString(C.wickra_volume_weighted_macd_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *VolumeWeightedMacd) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (VolumeWeightedMacdOutput, bool) {
@@ -37785,6 +41373,13 @@ func (ind *VolumeWeightedSr) WarmupPeriod() int {
 // emit a value.
 func (ind *VolumeWeightedSr) IsReady() bool {
 	r := bool(C.wickra_volume_weighted_sr_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *VolumeWeightedSr) Name() string {
+	r := C.GoString(C.wickra_volume_weighted_sr_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -37850,6 +41445,13 @@ func (ind *Vortex) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Vortex) Name() string {
+	r := C.GoString(C.wickra_vortex_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *Vortex) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (VortexOutput, bool) {
@@ -37911,6 +41513,13 @@ func (ind *Vpin) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Vpin) Name() string {
+	r := C.GoString(C.wickra_vpin_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Vpin) Update(price float64, size float64, isBuy bool, timestamp int64) float64 {
@@ -37964,6 +41573,13 @@ func (ind *Vwap) WarmupPeriod() int {
 // emit a value.
 func (ind *Vwap) IsReady() bool {
 	r := bool(C.wickra_vwap_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Vwap) Name() string {
+	r := C.GoString(C.wickra_vwap_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -38059,6 +41675,13 @@ func (ind *VwapStdDevBands) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *VwapStdDevBands) Name() string {
+	r := C.GoString(C.wickra_vwap_std_dev_bands_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *VwapStdDevBands) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (VwapStdDevBandsOutput, bool) {
@@ -38116,6 +41739,13 @@ func (ind *Vwma) WarmupPeriod() int {
 // emit a value.
 func (ind *Vwma) IsReady() bool {
 	r := bool(C.wickra_vwma_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Vwma) Name() string {
+	r := C.GoString(C.wickra_vwma_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -38211,6 +41841,13 @@ func (ind *Vzo) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Vzo) Name() string {
+	r := C.GoString(C.wickra_vzo_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Vzo) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -38298,6 +41935,13 @@ func (ind *Wad) WarmupPeriod() int {
 // emit a value.
 func (ind *Wad) IsReady() bool {
 	r := bool(C.wickra_wad_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Wad) Name() string {
+	r := C.GoString(C.wickra_wad_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -38393,6 +42037,13 @@ func (ind *WavePm) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *WavePm) Name() string {
+	r := C.GoString(C.wickra_wave_pm_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *WavePm) Update(value float64) float64 {
@@ -38464,6 +42115,13 @@ func (ind *WaveTrend) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *WaveTrend) Name() string {
+	r := C.GoString(C.wickra_wave_trend_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *WaveTrend) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (WaveTrendOutput, bool) {
@@ -38521,6 +42179,13 @@ func (ind *Wedge) WarmupPeriod() int {
 // emit a value.
 func (ind *Wedge) IsReady() bool {
 	r := bool(C.wickra_wedge_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Wedge) Name() string {
+	r := C.GoString(C.wickra_wedge_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -38616,6 +42281,13 @@ func (ind *WeightedClose) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *WeightedClose) Name() string {
+	r := C.GoString(C.wickra_weighted_close_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *WeightedClose) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -38703,6 +42375,13 @@ func (ind *WickRatio) WarmupPeriod() int {
 // emit a value.
 func (ind *WickRatio) IsReady() bool {
 	r := bool(C.wickra_wick_ratio_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *WickRatio) Name() string {
+	r := C.GoString(C.wickra_wick_ratio_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -38798,6 +42477,13 @@ func (ind *WilliamsFractals) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *WilliamsFractals) Name() string {
+	r := C.GoString(C.wickra_williams_fractals_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *WilliamsFractals) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (WilliamsFractalsOutput, bool) {
@@ -38855,6 +42541,13 @@ func (ind *WilliamsR) WarmupPeriod() int {
 // emit a value.
 func (ind *WilliamsR) IsReady() bool {
 	r := bool(C.wickra_williams_r_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *WilliamsR) Name() string {
+	r := C.GoString(C.wickra_williams_r_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -38950,6 +42643,13 @@ func (ind *WinRate) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *WinRate) Name() string {
+	r := C.GoString(C.wickra_win_rate_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *WinRate) Update(value float64) float64 {
@@ -39017,6 +42717,13 @@ func (ind *Wma) WarmupPeriod() int {
 // emit a value.
 func (ind *Wma) IsReady() bool {
 	r := bool(C.wickra_wma_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *Wma) Name() string {
+	r := C.GoString(C.wickra_wma_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -39092,6 +42799,13 @@ func (ind *WoodiePivots) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *WoodiePivots) Name() string {
+	r := C.GoString(C.wickra_woodie_pivots_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *WoodiePivots) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (WoodiePivotsOutput, bool) {
@@ -39149,6 +42863,13 @@ func (ind *YangZhangVolatility) WarmupPeriod() int {
 // emit a value.
 func (ind *YangZhangVolatility) IsReady() bool {
 	r := bool(C.wickra_yang_zhang_volatility_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *YangZhangVolatility) Name() string {
+	r := C.GoString(C.wickra_yang_zhang_volatility_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -39244,6 +42965,13 @@ func (ind *YoyoExit) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *YoyoExit) Name() string {
+	r := C.GoString(C.wickra_yoyo_exit_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *YoyoExit) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) float64 {
@@ -39335,6 +43063,13 @@ func (ind *ZScore) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ZScore) Name() string {
+	r := C.GoString(C.wickra_z_score_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *ZScore) Update(value float64) float64 {
@@ -39406,6 +43141,13 @@ func (ind *ZeroLagMacd) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *ZeroLagMacd) Name() string {
+	r := C.GoString(C.wickra_zero_lag_macd_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation. The bool reports whether a value is
 // available yet (false during warmup).
 func (ind *ZeroLagMacd) Update(value float64) (ZeroLagMacdOutput, bool) {
@@ -39463,6 +43205,13 @@ func (ind *ZigZag) WarmupPeriod() int {
 // emit a value.
 func (ind *ZigZag) IsReady() bool {
 	r := bool(C.wickra_zig_zag_is_ready(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
+// Name returns the indicator's canonical name.
+func (ind *ZigZag) Name() string {
+	r := C.GoString(C.wickra_zig_zag_name(ind.handle))
 	runtime.KeepAlive(ind)
 	return r
 }
@@ -39528,6 +43277,13 @@ func (ind *Zlema) IsReady() bool {
 	return r
 }
 
+// Name returns the indicator's canonical name.
+func (ind *Zlema) Name() string {
+	r := C.GoString(C.wickra_zlema_name(ind.handle))
+	runtime.KeepAlive(ind)
+	return r
+}
+
 // Update feeds one observation and returns the indicator value
 // (NaN until warmed up).
 func (ind *Zlema) Update(value float64) float64 {
@@ -39564,4 +43320,143 @@ func (ind *Zlema) Close() {
 		ind.handle = nil
 		runtime.SetFinalizer(ind, nil)
 	}
+}
+
+// ===== Live Binance kline feed (feature `live-binance`) =====
+
+// BinanceInterval selects a kline interval (the Interval declaration order).
+type BinanceInterval uint8
+
+// Kline intervals supported by the live Binance feed.
+const (
+	OneSecond BinanceInterval = iota
+	OneMinute
+	ThreeMinutes
+	FiveMinutes
+	FifteenMinutes
+	ThirtyMinutes
+	OneHour
+	TwoHours
+	FourHours
+	SixHours
+	EightHours
+	TwelveHours
+	OneDay
+	ThreeDays
+	OneWeek
+	OneMonth
+)
+
+// KlineEvent is one event from the live Binance feed.
+type KlineEvent struct {
+	Symbol   string
+	Open     float64
+	High     float64
+	Low      float64
+	Close    float64
+	Volume   float64
+	OpenTime int64
+	IsClosed bool
+}
+
+// BinanceFeed is a live Binance kline stream over the Wickra C ABI.
+type BinanceFeed struct {
+	handle *C.struct_BinanceStream
+}
+
+// NewBinanceFeed connects to Binance's live kline stream for the given
+// comma-separated symbols (case-insensitive) at interval. baseURL overrides
+// the endpoint ("" = production wss://stream.binance.com:9443; pass a ws://
+// URL to target a test server). It returns ErrInvalidParams on a bad symbol
+// list, an unknown interval, a bad URL, or a failed initial connect.
+func NewBinanceFeed(symbols string, interval BinanceInterval, baseURL string) (*BinanceFeed, error) {
+	csym := C.CString(symbols)
+	defer C.free(unsafe.Pointer(csym))
+	var curl *C.char
+	if baseURL != "" {
+		curl = C.CString(baseURL)
+		defer C.free(unsafe.Pointer(curl))
+	}
+	ptr := C.wickra_binance_connect(csym, C.uint8_t(interval), curl)
+	if ptr == nil {
+		return nil, ErrInvalidParams
+	}
+	obj := &BinanceFeed{handle: ptr}
+	runtime.SetFinalizer(obj, (*BinanceFeed).Close)
+	return obj, nil
+}
+
+// Next polls for the next kline event, waiting up to timeout. It returns the
+// event and true when one arrives, the zero value and false on timeout, or
+// ErrFeedClosed once the stream is closed or has errored out.
+func (f *BinanceFeed) Next(timeout time.Duration) (KlineEvent, bool, error) {
+	var ev C.struct_WickraKlineEvent
+	code := int(C.wickra_binance_next(f.handle, &ev, C.int64_t(timeout.Milliseconds())))
+	runtime.KeepAlive(f)
+	switch code {
+	case 1:
+		return klineFromC(&ev), true, nil
+	case 0:
+		return KlineEvent{}, false, nil
+	default:
+		return KlineEvent{}, false, ErrFeedClosed
+	}
+}
+
+func klineFromC(ev *C.struct_WickraKlineEvent) KlineEvent {
+	n := 0
+	for n < len(ev.symbol) && ev.symbol[n] != 0 {
+		n++
+	}
+	sym := C.GoBytes(unsafe.Pointer(&ev.symbol[0]), C.int(n))
+	return KlineEvent{
+		Symbol:   string(sym),
+		Open:     float64(ev.open),
+		High:     float64(ev.high),
+		Low:      float64(ev.low),
+		Close:    float64(ev.close),
+		Volume:   float64(ev.volume),
+		OpenTime: int64(ev.open_time),
+		IsClosed: bool(ev.is_closed),
+	}
+}
+
+// Close ends the stream and frees the native handle. Idempotent and safe to
+// call alongside the finalizer.
+func (f *BinanceFeed) Close() {
+	if f.handle != nil {
+		C.wickra_binance_close(f.handle)
+		C.wickra_binance_free(f.handle)
+		f.handle = nil
+		runtime.SetFinalizer(f, nil)
+	}
+}
+
+// FetchBinanceKlines fetches historical klines from Binance's REST endpoint.
+// symbol is the trading pair (case-insensitive), interval the kline interval,
+// and limit the number of candles to request (1..=1000). startMs/endMs are
+// inclusive Unix-millisecond bounds (negative = unset); baseURL overrides the
+// host ("" = production https://api.binance.com). It blocks until the response
+// arrives and returns ErrInvalidParams on a bad argument or transport error.
+func FetchBinanceKlines(symbol string, interval BinanceInterval, limit uint32, startMs, endMs int64, baseURL string) ([]Candle, error) {
+	if limit == 0 {
+		return nil, ErrInvalidParams
+	}
+	csym := C.CString(symbol)
+	defer C.free(unsafe.Pointer(csym))
+	var curl *C.char
+	if baseURL != "" {
+		curl = C.CString(baseURL)
+		defer C.free(unsafe.Pointer(curl))
+	}
+	buf := make([]C.struct_WickraCandle, limit)
+	n := int(C.wickra_binance_fetch_klines(csym, C.uint8_t(interval), C.uint32_t(limit), C.int64_t(startMs), C.int64_t(endMs), curl, &buf[0], C.uintptr_t(limit)))
+	if n < 0 {
+		return nil, ErrInvalidParams
+	}
+	out := make([]Candle, n)
+	for i := 0; i < n; i++ {
+		out[i] = Candle{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume), int64(buf[i].timestamp)}
+	}
+	return out, nil
 }
