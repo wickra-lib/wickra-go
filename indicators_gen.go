@@ -9,6 +9,7 @@ package wickra
 import "C"
 
 import (
+	"fmt"
 	"runtime"
 	"time"
 	"unsafe"
@@ -413,7 +414,7 @@ type KstOutput struct {
 
 // LeadLagCrossCorrelationOutput is the output of the LeadLagCrossCorrelation indicator.
 type LeadLagCrossCorrelationOutput struct {
-	Lag         int64
+	Lag         float64
 	Correlation float64
 }
 
@@ -1035,6 +1036,51 @@ func (ind *AbsoluteBreadthIndex) Update(change []float64, volume []float64, newH
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *AbsoluteBreadthIndex) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_absolute_breadth_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AbsoluteBreadthIndex) Reset() {
 	C.wickra_absolute_breadth_index_reset(ind.handle)
@@ -1059,6 +1105,10 @@ type AccelerationBands struct {
 // NewAccelerationBands constructs a AccelerationBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAccelerationBands(period int, factor float64) (*AccelerationBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_acceleration_bands_new(C.uintptr_t(period), C.double(factor))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -1103,6 +1153,45 @@ func (ind *AccelerationBands) Update(open float64, high float64, low float64, cl
 	return AccelerationBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *AccelerationBands) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AccelerationBandsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AccelerationBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAccelerationBandsOutput, n)
+	C.wickra_acceleration_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AccelerationBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AccelerationBands) Reset() {
 	C.wickra_acceleration_bands_reset(ind.handle)
@@ -1127,6 +1216,18 @@ type AcceleratorOscillator struct {
 // NewAcceleratorOscillator constructs a AcceleratorOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAcceleratorOscillator(aoFast int, aoSlow int, signalPeriod int) (*AcceleratorOscillator, error) {
+	if aoFast < 0 {
+		return nil, fmt.Errorf("%w: aoFast must not be negative, got %d",
+			ErrInvalidParams, aoFast)
+	}
+	if aoSlow < 0 {
+		return nil, fmt.Errorf("%w: aoSlow must not be negative, got %d",
+			ErrInvalidParams, aoSlow)
+	}
+	if signalPeriod < 0 {
+		return nil, fmt.Errorf("%w: signalPeriod must not be negative, got %d",
+			ErrInvalidParams, signalPeriod)
+	}
 	ptr := C.wickra_accelerator_oscillator_new(C.uintptr_t(aoFast), C.uintptr_t(aoSlow), C.uintptr_t(signalPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -1384,6 +1485,51 @@ func (ind *AdVolumeLine) Update(change []float64, volume []float64, newHigh []bo
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *AdVolumeLine) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_ad_volume_line_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AdVolumeLine) Reset() {
 	C.wickra_ad_volume_line_reset(ind.handle)
@@ -1408,6 +1554,10 @@ type AdaptiveCci struct {
 // NewAdaptiveCci constructs a AdaptiveCci. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAdaptiveCci(period int) (*AdaptiveCci, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_adaptive_cci_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -1584,6 +1734,10 @@ type AdaptiveLaguerreFilter struct {
 // NewAdaptiveLaguerreFilter constructs a AdaptiveLaguerreFilter. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAdaptiveLaguerreFilter(period int) (*AdaptiveLaguerreFilter, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_adaptive_laguerre_filter_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -1662,6 +1816,10 @@ type AdaptiveRsi struct {
 // NewAdaptiveRsi constructs a AdaptiveRsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAdaptiveRsi(period int) (*AdaptiveRsi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_adaptive_rsi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -1997,6 +2155,51 @@ func (ind *AdvanceDecline) Update(change []float64, volume []float64, newHigh []
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *AdvanceDecline) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_advance_decline_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AdvanceDecline) Reset() {
 	C.wickra_advance_decline_reset(ind.handle)
@@ -2082,6 +2285,51 @@ func (ind *AdvanceDeclineRatio) Update(change []float64, volume []float64, newHi
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *AdvanceDeclineRatio) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_advance_decline_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AdvanceDeclineRatio) Reset() {
 	C.wickra_advance_decline_ratio_reset(ind.handle)
@@ -2106,6 +2354,10 @@ type Adx struct {
 // NewAdx constructs a Adx. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAdx(period int) (*Adx, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_adx_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2150,6 +2402,45 @@ func (ind *Adx) Update(open float64, high float64, low float64, close float64, v
 	return AdxOutput{float64(out.plus_di), float64(out.minus_di), float64(out.adx)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Adx) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AdxOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AdxOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAdxOutput, n)
+	C.wickra_adx_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AdxOutput{float64(buf[i].plus_di), float64(buf[i].minus_di), float64(buf[i].adx)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Adx) Reset() {
 	C.wickra_adx_reset(ind.handle)
@@ -2174,6 +2465,10 @@ type Adxr struct {
 // NewAdxr constructs a Adxr. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAdxr(period int) (*Adxr, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_adxr_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2272,6 +2567,18 @@ type Alligator struct {
 // NewAlligator constructs a Alligator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAlligator(jawPeriod int, teethPeriod int, lipsPeriod int) (*Alligator, error) {
+	if jawPeriod < 0 {
+		return nil, fmt.Errorf("%w: jawPeriod must not be negative, got %d",
+			ErrInvalidParams, jawPeriod)
+	}
+	if teethPeriod < 0 {
+		return nil, fmt.Errorf("%w: teethPeriod must not be negative, got %d",
+			ErrInvalidParams, teethPeriod)
+	}
+	if lipsPeriod < 0 {
+		return nil, fmt.Errorf("%w: lipsPeriod must not be negative, got %d",
+			ErrInvalidParams, lipsPeriod)
+	}
 	ptr := C.wickra_alligator_new(C.uintptr_t(jawPeriod), C.uintptr_t(teethPeriod), C.uintptr_t(lipsPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2316,6 +2623,45 @@ func (ind *Alligator) Update(open float64, high float64, low float64, close floa
 	return AlligatorOutput{float64(out.jaw), float64(out.teeth), float64(out.lips)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Alligator) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AlligatorOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AlligatorOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAlligatorOutput, n)
+	C.wickra_alligator_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AlligatorOutput{float64(buf[i].jaw), float64(buf[i].teeth), float64(buf[i].lips)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Alligator) Reset() {
 	C.wickra_alligator_reset(ind.handle)
@@ -2340,6 +2686,10 @@ type Alma struct {
 // NewAlma constructs a Alma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAlma(period int, offset float64, sigma float64) (*Alma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_alma_new(C.uintptr_t(period), C.double(offset), C.double(sigma))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2418,6 +2768,10 @@ type Alpha struct {
 // NewAlpha constructs a Alpha. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAlpha(period int, riskFree float64) (*Alpha, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_alpha_new(C.uintptr_t(period), C.double(riskFree))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2500,6 +2854,10 @@ type AmihudIlliquidity struct {
 // NewAmihudIlliquidity constructs a AmihudIlliquidity. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAmihudIlliquidity(period int) (*AmihudIlliquidity, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_amihud_illiquidity_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2538,6 +2896,32 @@ func (ind *AmihudIlliquidity) Update(price float64, size float64, isBuy bool, ti
 	r := float64(C.wickra_amihud_illiquidity_update(ind.handle, C.double(price), C.double(size), C.bool(isBuy), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *AmihudIlliquidity) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_amihud_illiquidity_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -2740,6 +3124,10 @@ type AndrewsPitchfork struct {
 // NewAndrewsPitchfork constructs a AndrewsPitchfork. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAndrewsPitchfork(strength int) (*AndrewsPitchfork, error) {
+	if strength < 0 {
+		return nil, fmt.Errorf("%w: strength must not be negative, got %d",
+			ErrInvalidParams, strength)
+	}
 	ptr := C.wickra_andrews_pitchfork_new(C.uintptr_t(strength))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2784,6 +3172,45 @@ func (ind *AndrewsPitchfork) Update(open float64, high float64, low float64, clo
 	return AndrewsPitchforkOutput{float64(out.median), float64(out.upper), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *AndrewsPitchfork) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AndrewsPitchforkOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AndrewsPitchforkOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAndrewsPitchforkOutput, n)
+	C.wickra_andrews_pitchfork_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AndrewsPitchforkOutput{float64(buf[i].median), float64(buf[i].upper), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AndrewsPitchfork) Reset() {
 	C.wickra_andrews_pitchfork_reset(ind.handle)
@@ -2808,6 +3235,14 @@ type Apo struct {
 // NewApo constructs a Apo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewApo(fast int, slow int) (*Apo, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_apo_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2886,6 +3321,10 @@ type Aroon struct {
 // NewAroon constructs a Aroon. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAroon(period int) (*Aroon, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_aroon_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -2930,6 +3369,45 @@ func (ind *Aroon) Update(open float64, high float64, low float64, close float64,
 	return AroonOutput{float64(out.up), float64(out.down)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Aroon) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AroonOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AroonOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAroonOutput, n)
+	C.wickra_aroon_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AroonOutput{float64(buf[i].up), float64(buf[i].down)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Aroon) Reset() {
 	C.wickra_aroon_reset(ind.handle)
@@ -2954,6 +3432,10 @@ type AroonOscillator struct {
 // NewAroonOscillator constructs a AroonOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAroonOscillator(period int) (*AroonOscillator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_aroon_oscillator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3052,6 +3534,10 @@ type Atr struct {
 // NewAtr constructs a Atr. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAtr(period int) (*Atr, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_atr_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3150,6 +3636,10 @@ type AtrBands struct {
 // NewAtrBands constructs a AtrBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAtrBands(period int, multiplier float64) (*AtrBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_atr_bands_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3194,6 +3684,45 @@ func (ind *AtrBands) Update(open float64, high float64, low float64, close float
 	return AtrBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *AtrBands) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AtrBandsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AtrBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAtrBandsOutput, n)
+	C.wickra_atr_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AtrBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AtrBands) Reset() {
 	C.wickra_atr_bands_reset(ind.handle)
@@ -3218,6 +3747,10 @@ type AtrRatchet struct {
 // NewAtrRatchet constructs a AtrRatchet. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAtrRatchet(atrPeriod int, startMult float64, increment float64) (*AtrRatchet, error) {
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_atr_ratchet_new(C.uintptr_t(atrPeriod), C.double(startMult), C.double(increment))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3262,6 +3795,45 @@ func (ind *AtrRatchet) Update(open float64, high float64, low float64, close flo
 	return AtrRatchetOutput{float64(out.value), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *AtrRatchet) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AtrRatchetOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AtrRatchetOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAtrRatchetOutput, n)
+	C.wickra_atr_ratchet_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AtrRatchetOutput{float64(buf[i].value), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AtrRatchet) Reset() {
 	C.wickra_atr_ratchet_reset(ind.handle)
@@ -3286,6 +3858,10 @@ type AtrTrailingStop struct {
 // NewAtrTrailingStop constructs a AtrTrailingStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAtrTrailingStop(atrPeriod int, multiplier float64) (*AtrTrailingStop, error) {
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_atr_trailing_stop_new(C.uintptr_t(atrPeriod), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3428,6 +4004,45 @@ func (ind *AutoFib) Update(open float64, high float64, low float64, close float6
 	return AutoFibOutput{float64(out.level_0), float64(out.level_236), float64(out.level_382), float64(out.level_500), float64(out.level_618), float64(out.level_786), float64(out.level_1000)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *AutoFib) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []AutoFibOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]AutoFibOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraAutoFibOutput, n)
+	C.wickra_auto_fib_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = AutoFibOutput{float64(buf[i].level_0), float64(buf[i].level_236), float64(buf[i].level_382), float64(buf[i].level_500), float64(buf[i].level_618), float64(buf[i].level_786), float64(buf[i].level_1000)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *AutoFib) Reset() {
 	C.wickra_auto_fib_reset(ind.handle)
@@ -3452,6 +4067,14 @@ type Autocorrelation struct {
 // NewAutocorrelation constructs a Autocorrelation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAutocorrelation(period int, lag int) (*Autocorrelation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if lag < 0 {
+		return nil, fmt.Errorf("%w: lag must not be negative, got %d",
+			ErrInvalidParams, lag)
+	}
 	ptr := C.wickra_autocorrelation_new(C.uintptr_t(period), C.uintptr_t(lag))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3530,6 +4153,14 @@ type AutocorrelationPeriodogram struct {
 // NewAutocorrelationPeriodogram constructs a AutocorrelationPeriodogram. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAutocorrelationPeriodogram(minPeriod int, maxPeriod int) (*AutocorrelationPeriodogram, error) {
+	if minPeriod < 0 {
+		return nil, fmt.Errorf("%w: minPeriod must not be negative, got %d",
+			ErrInvalidParams, minPeriod)
+	}
+	if maxPeriod < 0 {
+		return nil, fmt.Errorf("%w: maxPeriod must not be negative, got %d",
+			ErrInvalidParams, maxPeriod)
+	}
 	ptr := C.wickra_autocorrelation_periodogram_new(C.uintptr_t(minPeriod), C.uintptr_t(maxPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3608,6 +4239,10 @@ type AverageDailyRange struct {
 // NewAverageDailyRange constructs a AverageDailyRange. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAverageDailyRange(period int, utcOffsetMinutes int32) (*AverageDailyRange, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_average_daily_range_new(C.uintptr_t(period), C.int32_t(utcOffsetMinutes))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3706,6 +4341,10 @@ type AverageDrawdown struct {
 // NewAverageDrawdown constructs a AverageDrawdown. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAverageDrawdown(period int) (*AverageDrawdown, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_average_drawdown_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3882,6 +4521,14 @@ type AwesomeOscillator struct {
 // NewAwesomeOscillator constructs a AwesomeOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAwesomeOscillator(fast int, slow int) (*AwesomeOscillator, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_awesome_oscillator_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -3980,6 +4627,18 @@ type AwesomeOscillatorHistogram struct {
 // NewAwesomeOscillatorHistogram constructs a AwesomeOscillatorHistogram. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewAwesomeOscillatorHistogram(fast int, slow int, lookback int) (*AwesomeOscillatorHistogram, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if lookback < 0 {
+		return nil, fmt.Errorf("%w: lookback must not be negative, got %d",
+			ErrInvalidParams, lookback)
+	}
 	ptr := C.wickra_awesome_oscillator_histogram_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(lookback))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4176,6 +4835,10 @@ type BandpassFilter struct {
 // NewBandpassFilter constructs a BandpassFilter. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBandpassFilter(period int, bandwidth float64) (*BandpassFilter, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_bandpass_filter_new(C.uintptr_t(period), C.double(bandwidth))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4450,6 +5113,10 @@ type Beta struct {
 // NewBeta constructs a Beta. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBeta(period int) (*Beta, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_beta_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4532,6 +5199,10 @@ type BetaNeutralSpread struct {
 // NewBetaNeutralSpread constructs a BetaNeutralSpread. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBetaNeutralSpread(period int) (*BetaNeutralSpread, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_beta_neutral_spread_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4614,6 +5285,10 @@ type BetterVolume struct {
 // NewBetterVolume constructs a BetterVolume. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBetterVolume(period int) (*BetterVolume, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_better_volume_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4712,6 +5387,10 @@ type BipowerVariation struct {
 // NewBipowerVariation constructs a BipowerVariation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBipowerVariation(period int) (*BipowerVariation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_bipower_variation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4888,6 +5567,10 @@ type BollingerBands struct {
 // NewBollingerBands constructs a BollingerBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBollingerBands(period int, multiplier float64) (*BollingerBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_bollinger_bands_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -4932,6 +5615,25 @@ func (ind *BollingerBands) Update(value float64) (BollingerOutput, bool) {
 	return BollingerOutput{float64(out.upper), float64(out.middle), float64(out.lower), float64(out.stddev)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *BollingerBands) Batch(input []float64) []BollingerOutput {
+	n := len(input)
+	out := make([]BollingerOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraBollingerOutput, n)
+	C.wickra_bollinger_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = BollingerOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower), float64(buf[i].stddev)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *BollingerBands) Reset() {
 	C.wickra_bollinger_bands_reset(ind.handle)
@@ -4956,6 +5658,10 @@ type BollingerBandwidth struct {
 // NewBollingerBandwidth constructs a BollingerBandwidth. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBollingerBandwidth(period int, multiplier float64) (*BollingerBandwidth, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_bollinger_bandwidth_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5034,6 +5740,10 @@ type BomarBands struct {
 // NewBomarBands constructs a BomarBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBomarBands(period int, coverage float64) (*BomarBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_bomar_bands_new(C.uintptr_t(period), C.double(coverage))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5078,6 +5788,25 @@ func (ind *BomarBands) Update(value float64) (BomarBandsOutput, bool) {
 	return BomarBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *BomarBands) Batch(input []float64) []BomarBandsOutput {
+	n := len(input)
+	out := make([]BomarBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraBomarBandsOutput, n)
+	C.wickra_bomar_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = BomarBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *BomarBands) Reset() {
 	C.wickra_bomar_bands_reset(ind.handle)
@@ -5102,6 +5831,10 @@ type BreadthThrust struct {
 // NewBreadthThrust constructs a BreadthThrust. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBreadthThrust(period int) (*BreadthThrust, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_breadth_thrust_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5161,6 +5894,51 @@ func (ind *BreadthThrust) Update(change []float64, volume []float64, newHigh []b
 	runtime.KeepAlive(aboveMa)
 	runtime.KeepAlive(onBuySignal)
 	return r
+}
+
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *BreadthThrust) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_breadth_thrust_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -5346,6 +6124,51 @@ func (ind *BullishPercentIndex) Update(change []float64, volume []float64, newHi
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *BullishPercentIndex) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_bullish_percent_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *BullishPercentIndex) Reset() {
 	C.wickra_bullish_percent_index_reset(ind.handle)
@@ -5370,6 +6193,10 @@ type BurkeRatio struct {
 // NewBurkeRatio constructs a BurkeRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewBurkeRatio(period int) (*BurkeRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_burke_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5586,6 +6413,64 @@ func (ind *CalendarSpread) Update(fundingRate float64, markPrice float64, indexP
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *CalendarSpread) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_calendar_spread_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *CalendarSpread) Reset() {
 	C.wickra_calendar_spread_reset(ind.handle)
@@ -5610,6 +6495,10 @@ type CalmarRatio struct {
 // NewCalmarRatio constructs a CalmarRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCalmarRatio(period int) (*CalmarRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_calmar_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5732,6 +6621,45 @@ func (ind *Camarilla) Update(open float64, high float64, low float64, close floa
 	return CamarillaPivotsOutput{float64(out.pp), float64(out.r1), float64(out.r2), float64(out.r3), float64(out.r4), float64(out.s1), float64(out.s2), float64(out.s3), float64(out.s4)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Camarilla) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []CamarillaPivotsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]CamarillaPivotsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraCamarillaPivotsOutput, n)
+	C.wickra_camarilla_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = CamarillaPivotsOutput{float64(buf[i].pp), float64(buf[i].r1), float64(buf[i].r2), float64(buf[i].r3), float64(buf[i].r4), float64(buf[i].s1), float64(buf[i].s2), float64(buf[i].s3), float64(buf[i].s4)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Camarilla) Reset() {
 	C.wickra_camarilla_reset(ind.handle)
@@ -5807,6 +6735,10 @@ type CandleVolume struct {
 // NewCandleVolume constructs a CandleVolume. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCandleVolume(period int) (*CandleVolume, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_candle_volume_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5851,6 +6783,45 @@ func (ind *CandleVolume) Update(open float64, high float64, low float64, close f
 	return CandleVolumeOutput{float64(out.body), float64(out.width)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *CandleVolume) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []CandleVolumeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]CandleVolumeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraCandleVolumeOutput, n)
+	C.wickra_candle_volume_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = CandleVolumeOutput{float64(buf[i].body), float64(buf[i].width)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *CandleVolume) Reset() {
 	C.wickra_candle_volume_reset(ind.handle)
@@ -5875,6 +6846,10 @@ type Cci struct {
 // NewCci constructs a Cci. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCci(period int) (*Cci, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_cci_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -5973,6 +6948,10 @@ type CenterOfGravity struct {
 // NewCenterOfGravity constructs a CenterOfGravity. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCenterOfGravity(period int) (*CenterOfGravity, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_center_of_gravity_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6095,6 +7074,45 @@ func (ind *CentralPivotRange) Update(open float64, high float64, low float64, cl
 	return CentralPivotRangeOutput{float64(out.pivot), float64(out.tc), float64(out.bc)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *CentralPivotRange) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []CentralPivotRangeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]CentralPivotRangeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraCentralPivotRangeOutput, n)
+	C.wickra_central_pivot_range_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = CentralPivotRangeOutput{float64(buf[i].pivot), float64(buf[i].tc), float64(buf[i].bc)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *CentralPivotRange) Reset() {
 	C.wickra_central_pivot_range_reset(ind.handle)
@@ -6119,6 +7137,10 @@ type Cfo struct {
 // NewCfo constructs a Cfo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCfo(period int) (*Cfo, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_cfo_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6197,6 +7219,10 @@ type ChaikinMoneyFlow struct {
 // NewChaikinMoneyFlow constructs a ChaikinMoneyFlow. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewChaikinMoneyFlow(period int) (*ChaikinMoneyFlow, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_chaikin_money_flow_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6295,6 +7321,14 @@ type ChaikinOscillator struct {
 // NewChaikinOscillator constructs a ChaikinOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewChaikinOscillator(fast int, slow int) (*ChaikinOscillator, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_chaikin_oscillator_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6393,6 +7427,14 @@ type ChaikinVolatility struct {
 // NewChaikinVolatility constructs a ChaikinVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewChaikinVolatility(emaPeriod int, rocPeriod int) (*ChaikinVolatility, error) {
+	if emaPeriod < 0 {
+		return nil, fmt.Errorf("%w: emaPeriod must not be negative, got %d",
+			ErrInvalidParams, emaPeriod)
+	}
+	if rocPeriod < 0 {
+		return nil, fmt.Errorf("%w: rocPeriod must not be negative, got %d",
+			ErrInvalidParams, rocPeriod)
+	}
 	ptr := C.wickra_chaikin_volatility_new(C.uintptr_t(emaPeriod), C.uintptr_t(rocPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6491,6 +7533,14 @@ type ChandeKrollStop struct {
 // NewChandeKrollStop constructs a ChandeKrollStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewChandeKrollStop(atrPeriod int, atrMultiplier float64, stopPeriod int) (*ChandeKrollStop, error) {
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
+	if stopPeriod < 0 {
+		return nil, fmt.Errorf("%w: stopPeriod must not be negative, got %d",
+			ErrInvalidParams, stopPeriod)
+	}
 	ptr := C.wickra_chande_kroll_stop_new(C.uintptr_t(atrPeriod), C.double(atrMultiplier), C.uintptr_t(stopPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6535,6 +7585,45 @@ func (ind *ChandeKrollStop) Update(open float64, high float64, low float64, clos
 	return ChandeKrollStopOutput{float64(out.stop_long), float64(out.stop_short)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ChandeKrollStop) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ChandeKrollStopOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ChandeKrollStopOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraChandeKrollStopOutput, n)
+	C.wickra_chande_kroll_stop_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ChandeKrollStopOutput{float64(buf[i].stop_long), float64(buf[i].stop_short)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ChandeKrollStop) Reset() {
 	C.wickra_chande_kroll_stop_reset(ind.handle)
@@ -6559,6 +7648,10 @@ type ChandelierExit struct {
 // NewChandelierExit constructs a ChandelierExit. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewChandelierExit(period int, multiplier float64) (*ChandelierExit, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_chandelier_exit_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6603,6 +7696,45 @@ func (ind *ChandelierExit) Update(open float64, high float64, low float64, close
 	return ChandelierExitOutput{float64(out.long_stop), float64(out.short_stop)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ChandelierExit) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ChandelierExitOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ChandelierExitOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraChandelierExitOutput, n)
+	C.wickra_chandelier_exit_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ChandelierExitOutput{float64(buf[i].long_stop), float64(buf[i].short_stop)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ChandelierExit) Reset() {
 	C.wickra_chandelier_exit_reset(ind.handle)
@@ -6627,6 +7759,10 @@ type ChoppinessIndex struct {
 // NewChoppinessIndex constructs a ChoppinessIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewChoppinessIndex(period int) (*ChoppinessIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_choppiness_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -6767,6 +7903,45 @@ func (ind *ClassicPivots) Update(open float64, high float64, low float64, close 
 		return ClassicPivotsOutput{}, false
 	}
 	return ClassicPivotsOutput{float64(out.pp), float64(out.r1), float64(out.r2), float64(out.r3), float64(out.s1), float64(out.s2), float64(out.s3)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ClassicPivots) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ClassicPivotsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ClassicPivotsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraClassicPivotsOutput, n)
+	C.wickra_classic_pivots_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ClassicPivotsOutput{float64(buf[i].pp), float64(buf[i].r1), float64(buf[i].r2), float64(buf[i].r3), float64(buf[i].s1), float64(buf[i].s2), float64(buf[i].s3)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -6989,6 +8164,10 @@ type Cmo struct {
 // NewCmo constructs a Cmo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCmo(period int) (*Cmo, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_cmo_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7067,6 +8246,10 @@ type CoefficientOfVariation struct {
 // NewCoefficientOfVariation constructs a CoefficientOfVariation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCoefficientOfVariation(period int) (*CoefficientOfVariation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_coefficient_of_variation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7145,6 +8328,14 @@ type Cointegration struct {
 // NewCointegration constructs a Cointegration. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCointegration(period int, adfLags int) (*Cointegration, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if adfLags < 0 {
+		return nil, fmt.Errorf("%w: adfLags must not be negative, got %d",
+			ErrInvalidParams, adfLags)
+	}
 	ptr := C.wickra_cointegration_new(C.uintptr_t(period), C.uintptr_t(adfLags))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7189,6 +8380,29 @@ func (ind *Cointegration) Update(x float64, y float64) (CointegrationOutput, boo
 	return CointegrationOutput{float64(out.hedge_ratio), float64(out.spread), float64(out.adf_stat)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Cointegration) Batch(x []float64, y []float64) []CointegrationOutput {
+	n := len(x)
+	if len(y) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]CointegrationOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraCointegrationOutput, n)
+	C.wickra_cointegration_batch(ind.handle, (*C.double)(unsafe.Pointer(&x[0])), (*C.double)(unsafe.Pointer(&y[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(x)
+	runtime.KeepAlive(y)
+	for i := range buf {
+		out[i] = CointegrationOutput{float64(buf[i].hedge_ratio), float64(buf[i].spread), float64(buf[i].adf_stat)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Cointegration) Reset() {
 	C.wickra_cointegration_reset(ind.handle)
@@ -7213,6 +8427,10 @@ type CommonSenseRatio struct {
 // NewCommonSenseRatio constructs a CommonSenseRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCommonSenseRatio(period int) (*CommonSenseRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_common_sense_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7291,6 +8509,14 @@ type CompositeProfile struct {
 // NewCompositeProfile constructs a CompositeProfile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCompositeProfile(period int, bins int, valueAreaPct float64) (*CompositeProfile, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if bins < 0 {
+		return nil, fmt.Errorf("%w: bins must not be negative, got %d",
+			ErrInvalidParams, bins)
+	}
 	ptr := C.wickra_composite_profile_new(C.uintptr_t(period), C.uintptr_t(bins), C.double(valueAreaPct))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7333,6 +8559,45 @@ func (ind *CompositeProfile) Update(open float64, high float64, low float64, clo
 		return CompositeProfileOutput{}, false
 	}
 	return CompositeProfileOutput{float64(out.poc), float64(out.vah), float64(out.val)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *CompositeProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []CompositeProfileOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]CompositeProfileOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraCompositeProfileOutput, n)
+	C.wickra_composite_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = CompositeProfileOutput{float64(buf[i].poc), float64(buf[i].vah), float64(buf[i].val)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -7457,6 +8722,10 @@ type ConditionalValueAtRisk struct {
 // NewConditionalValueAtRisk constructs a ConditionalValueAtRisk. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewConditionalValueAtRisk(period int, confidence float64) (*ConditionalValueAtRisk, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_conditional_value_at_risk_new(C.uintptr_t(period), C.double(confidence))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7535,6 +8804,18 @@ type ConnorsRsi struct {
 // NewConnorsRsi constructs a ConnorsRsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewConnorsRsi(periodRsi int, periodStreak int, periodRank int) (*ConnorsRsi, error) {
+	if periodRsi < 0 {
+		return nil, fmt.Errorf("%w: periodRsi must not be negative, got %d",
+			ErrInvalidParams, periodRsi)
+	}
+	if periodStreak < 0 {
+		return nil, fmt.Errorf("%w: periodStreak must not be negative, got %d",
+			ErrInvalidParams, periodStreak)
+	}
+	if periodRank < 0 {
+		return nil, fmt.Errorf("%w: periodRank must not be negative, got %d",
+			ErrInvalidParams, periodRank)
+	}
 	ptr := C.wickra_connors_rsi_new(C.uintptr_t(periodRsi), C.uintptr_t(periodStreak), C.uintptr_t(periodRank))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7613,6 +8894,18 @@ type Coppock struct {
 // NewCoppock constructs a Coppock. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCoppock(rocLongPeriod int, rocShortPeriod int, wmaPeriod int) (*Coppock, error) {
+	if rocLongPeriod < 0 {
+		return nil, fmt.Errorf("%w: rocLongPeriod must not be negative, got %d",
+			ErrInvalidParams, rocLongPeriod)
+	}
+	if rocShortPeriod < 0 {
+		return nil, fmt.Errorf("%w: rocShortPeriod must not be negative, got %d",
+			ErrInvalidParams, rocShortPeriod)
+	}
+	if wmaPeriod < 0 {
+		return nil, fmt.Errorf("%w: wmaPeriod must not be negative, got %d",
+			ErrInvalidParams, wmaPeriod)
+	}
 	ptr := C.wickra_coppock_new(C.uintptr_t(rocLongPeriod), C.uintptr_t(rocShortPeriod), C.uintptr_t(wmaPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -7691,6 +8984,10 @@ type CorrelationTrendIndicator struct {
 // NewCorrelationTrendIndicator constructs a CorrelationTrendIndicator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCorrelationTrendIndicator(period int) (*CorrelationTrendIndicator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_correlation_trend_indicator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -8005,6 +9302,32 @@ func (ind *CumulativeVolumeDelta) Update(price float64, size float64, isBuy bool
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *CumulativeVolumeDelta) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_cumulative_volume_delta_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *CumulativeVolumeDelta) Reset() {
 	C.wickra_cumulative_volume_delta_reset(ind.handle)
@@ -8088,6 +9411,51 @@ func (ind *CumulativeVolumeIndex) Update(change []float64, volume []float64, new
 	runtime.KeepAlive(aboveMa)
 	runtime.KeepAlive(onBuySignal)
 	return r
+}
+
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *CumulativeVolumeIndex) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_cumulative_volume_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -8212,6 +9580,10 @@ type CyberneticCycle struct {
 // NewCyberneticCycle constructs a CyberneticCycle. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewCyberneticCycle(period int) (*CyberneticCycle, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_cybernetic_cycle_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -8394,7 +9766,7 @@ func NewDayOfWeekProfile(utcOffsetMinutes int32) (*DayOfWeekProfile, error) {
 		return nil, ErrInvalidParams
 	}
 	obj := &DayOfWeekProfile{handle: ptr}
-	obj.valuesCap = 4096
+	obj.valuesCap = int(C.wickra_day_of_week_profile_width(ptr))
 	runtime.SetFinalizer(obj, (*DayOfWeekProfile).Close)
 	return obj, nil
 }
@@ -8434,6 +9806,45 @@ func (ind *DayOfWeekProfile) Update(open float64, high float64, low float64, clo
 	return values[:n], true
 }
 
+// Batch feeds a whole series in one FFI call and returns one profile per
+// input. A row the indicator did not produce carries NaN.
+func (ind *DayOfWeekProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) [][]float64 {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	width := ind.valuesCap
+	flat := make([]float64, n*width)
+	C.wickra_day_of_week_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&flat[0])), C.uintptr_t(width), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	out := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		out[i] = flat[i*width : (i+1)*width]
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *DayOfWeekProfile) Reset() {
 	C.wickra_day_of_week_profile_reset(ind.handle)
@@ -8458,6 +9869,10 @@ type Decycler struct {
 // NewDecycler constructs a Decycler. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDecycler(period int) (*Decycler, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_decycler_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -8536,6 +9951,14 @@ type DecyclerOscillator struct {
 // NewDecyclerOscillator constructs a DecyclerOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDecyclerOscillator(fast int, slow int) (*DecyclerOscillator, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_decycler_oscillator_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -8614,6 +10037,10 @@ type Dema struct {
 // NewDema constructs a Dema. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDema(period int) (*Dema, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_dema_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -8692,6 +10119,10 @@ type DemandIndex struct {
 // NewDemandIndex constructs a DemandIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDemandIndex(period int) (*DemandIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_demand_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -8834,6 +10265,45 @@ func (ind *DemarkPivots) Update(open float64, high float64, low float64, close f
 	return DemarkPivotsOutput{float64(out.pp), float64(out.r1), float64(out.s1)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *DemarkPivots) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []DemarkPivotsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]DemarkPivotsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraDemarkPivotsOutput, n)
+	C.wickra_demark_pivots_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = DemarkPivotsOutput{float64(buf[i].pp), float64(buf[i].r1), float64(buf[i].s1)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *DemarkPivots) Reset() {
 	C.wickra_demark_pivots_reset(ind.handle)
@@ -8908,6 +10378,42 @@ func (ind *DepthSlope) Update(bidPrice []float64, bidSize []float64, askPrice []
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *DepthSlope) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_depth_slope_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *DepthSlope) Reset() {
 	C.wickra_depth_slope_reset(ind.handle)
@@ -8932,6 +10438,22 @@ type DerivativeOscillator struct {
 // NewDerivativeOscillator constructs a DerivativeOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDerivativeOscillator(rsiPeriod int, smooth1 int, smooth2 int, signalPeriod int) (*DerivativeOscillator, error) {
+	if rsiPeriod < 0 {
+		return nil, fmt.Errorf("%w: rsiPeriod must not be negative, got %d",
+			ErrInvalidParams, rsiPeriod)
+	}
+	if smooth1 < 0 {
+		return nil, fmt.Errorf("%w: smooth1 must not be negative, got %d",
+			ErrInvalidParams, smooth1)
+	}
+	if smooth2 < 0 {
+		return nil, fmt.Errorf("%w: smooth2 must not be negative, got %d",
+			ErrInvalidParams, smooth2)
+	}
+	if signalPeriod < 0 {
+		return nil, fmt.Errorf("%w: signalPeriod must not be negative, got %d",
+			ErrInvalidParams, signalPeriod)
+	}
 	ptr := C.wickra_derivative_oscillator_new(C.uintptr_t(rsiPeriod), C.uintptr_t(smooth1), C.uintptr_t(smooth2), C.uintptr_t(signalPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9010,6 +10532,10 @@ type DetrendedStdDev struct {
 // NewDetrendedStdDev constructs a DetrendedStdDev. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDetrendedStdDev(period int) (*DetrendedStdDev, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_detrended_std_dev_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9088,6 +10614,10 @@ type DisparityIndex struct {
 // NewDisparityIndex constructs a DisparityIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDisparityIndex(period int) (*DisparityIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_disparity_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9166,6 +10696,10 @@ type DistanceSsd struct {
 // NewDistanceSsd constructs a DistanceSsd. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDistanceSsd(period int) (*DistanceSsd, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_distance_ssd_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9471,7 +11005,64 @@ func (ind *DollarBars) Update(open float64, high float64, low float64, close flo
 		return nil
 	}
 	out := make([]DollarBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = DollarBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume), float64(buf[i].dollar)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraDollarBar, n-capacity)
+		got := int(C.wickra_dollar_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = DollarBar{float64(rest[i].open), float64(rest[i].high), float64(rest[i].low), float64(rest[i].close), float64(rest[i].volume), float64(rest[i].dollar)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *DollarBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []DollarBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_dollar_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraDollarBar, total)
+	got := int(C.wickra_dollar_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]DollarBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = DollarBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume), float64(buf[i].dollar)}
 	}
 	return out
@@ -9501,6 +11092,10 @@ type Donchian struct {
 // NewDonchian constructs a Donchian. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDonchian(period int) (*Donchian, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_donchian_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9545,6 +11140,45 @@ func (ind *Donchian) Update(open float64, high float64, low float64, close float
 	return DonchianOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Donchian) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []DonchianOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]DonchianOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraDonchianOutput, n)
+	C.wickra_donchian_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = DonchianOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Donchian) Reset() {
 	C.wickra_donchian_reset(ind.handle)
@@ -9569,6 +11203,10 @@ type DonchianStop struct {
 // NewDonchianStop constructs a DonchianStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDonchianStop(period int) (*DonchianStop, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_donchian_stop_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9613,6 +11251,45 @@ func (ind *DonchianStop) Update(open float64, high float64, low float64, close f
 	return DonchianStopOutput{float64(out.stop_long), float64(out.stop_short)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *DonchianStop) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []DonchianStopOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]DonchianStopOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraDonchianStopOutput, n)
+	C.wickra_donchian_stop_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = DonchianStopOutput{float64(buf[i].stop_long), float64(buf[i].stop_short)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *DonchianStop) Reset() {
 	C.wickra_donchian_stop_reset(ind.handle)
@@ -9637,6 +11314,10 @@ type DoubleBollinger struct {
 // NewDoubleBollinger constructs a DoubleBollinger. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDoubleBollinger(period int, kInner float64, kOuter float64) (*DoubleBollinger, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_double_bollinger_new(C.uintptr_t(period), C.double(kInner), C.double(kOuter))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -9679,6 +11360,25 @@ func (ind *DoubleBollinger) Update(value float64) (DoubleBollingerOutput, bool) 
 		return DoubleBollingerOutput{}, false
 	}
 	return DoubleBollingerOutput{float64(out.upper_outer), float64(out.upper_inner), float64(out.middle), float64(out.lower_inner), float64(out.lower_outer)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *DoubleBollinger) Batch(input []float64) []DoubleBollingerOutput {
+	n := len(input)
+	out := make([]DoubleBollingerOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraDoubleBollingerOutput, n)
+	C.wickra_double_bollinger_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = DoubleBollingerOutput{float64(buf[i].upper_outer), float64(buf[i].upper_inner), float64(buf[i].middle), float64(buf[i].lower_inner), float64(buf[i].lower_outer)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -9901,6 +11601,10 @@ type Dpo struct {
 // NewDpo constructs a Dpo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDpo(period int) (*Dpo, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_dpo_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10155,6 +11859,10 @@ type DumplingTop struct {
 // NewDumplingTop constructs a DumplingTop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDumplingTop(period int) (*DumplingTop, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_dumpling_top_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10253,6 +11961,10 @@ type Dx struct {
 // NewDx constructs a Dx. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDx(period int) (*Dx, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_dx_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10351,6 +12063,10 @@ type DynamicMomentumIndex struct {
 // NewDynamicMomentumIndex constructs a DynamicMomentumIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewDynamicMomentumIndex(period int) (*DynamicMomentumIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_dynamic_momentum_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10429,6 +12145,10 @@ type EaseOfMovement struct {
 // NewEaseOfMovement constructs a EaseOfMovement. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEaseOfMovement(period int) (*EaseOfMovement, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ease_of_movement_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10567,6 +12287,36 @@ func (ind *EffectiveSpread) Update(price float64, size float64, isBuy bool, time
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *EffectiveSpread) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64, mid []float64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(mid) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_effective_spread_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&mid[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	runtime.KeepAlive(mid)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *EffectiveSpread) Reset() {
 	C.wickra_effective_spread_reset(ind.handle)
@@ -10591,6 +12341,10 @@ type EhlersStochastic struct {
 // NewEhlersStochastic constructs a EhlersStochastic. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEhlersStochastic(period int) (*EhlersStochastic, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ehlers_stochastic_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10669,6 +12423,10 @@ type Ehma struct {
 // NewEhma constructs a Ehma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEhma(period int) (*Ehma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ehma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10747,6 +12505,22 @@ type ElderImpulse struct {
 // NewElderImpulse constructs a ElderImpulse. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewElderImpulse(emaPeriod int, macdFast int, macdSlow int, macdSignal int) (*ElderImpulse, error) {
+	if emaPeriod < 0 {
+		return nil, fmt.Errorf("%w: emaPeriod must not be negative, got %d",
+			ErrInvalidParams, emaPeriod)
+	}
+	if macdFast < 0 {
+		return nil, fmt.Errorf("%w: macdFast must not be negative, got %d",
+			ErrInvalidParams, macdFast)
+	}
+	if macdSlow < 0 {
+		return nil, fmt.Errorf("%w: macdSlow must not be negative, got %d",
+			ErrInvalidParams, macdSlow)
+	}
+	if macdSignal < 0 {
+		return nil, fmt.Errorf("%w: macdSignal must not be negative, got %d",
+			ErrInvalidParams, macdSignal)
+	}
 	ptr := C.wickra_elder_impulse_new(C.uintptr_t(emaPeriod), C.uintptr_t(macdFast), C.uintptr_t(macdSlow), C.uintptr_t(macdSignal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10825,6 +12599,10 @@ type ElderRay struct {
 // NewElderRay constructs a ElderRay. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewElderRay(period int) (*ElderRay, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_elder_ray_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10869,6 +12647,45 @@ func (ind *ElderRay) Update(open float64, high float64, low float64, close float
 	return ElderRayOutput{float64(out.bull_power), float64(out.bear_power)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ElderRay) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ElderRayOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ElderRayOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraElderRayOutput, n)
+	C.wickra_elder_ray_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ElderRayOutput{float64(buf[i].bull_power), float64(buf[i].bear_power)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ElderRay) Reset() {
 	C.wickra_elder_ray_reset(ind.handle)
@@ -10893,6 +12710,10 @@ type ElderSafeZone struct {
 // NewElderSafeZone constructs a ElderSafeZone. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewElderSafeZone(period int, coeff float64) (*ElderSafeZone, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_elder_safe_zone_new(C.uintptr_t(period), C.double(coeff))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -10937,6 +12758,45 @@ func (ind *ElderSafeZone) Update(open float64, high float64, low float64, close 
 	return ElderSafeZoneOutput{float64(out.value), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ElderSafeZone) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ElderSafeZoneOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ElderSafeZoneOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraElderSafeZoneOutput, n)
+	C.wickra_elder_safe_zone_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ElderSafeZoneOutput{float64(buf[i].value), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ElderSafeZone) Reset() {
 	C.wickra_elder_safe_zone_reset(ind.handle)
@@ -10961,6 +12821,10 @@ type Ema struct {
 // NewEma constructs a Ema. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEma(period int) (*Ema, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ema_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -11039,6 +12903,10 @@ type EmpiricalModeDecomposition struct {
 // NewEmpiricalModeDecomposition constructs a EmpiricalModeDecomposition. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEmpiricalModeDecomposition(period int, fraction float64) (*EmpiricalModeDecomposition, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_empirical_mode_decomposition_new(C.uintptr_t(period), C.double(fraction))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -11215,6 +13083,10 @@ type Equivolume struct {
 // NewEquivolume constructs a Equivolume. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEquivolume(period int) (*Equivolume, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_equivolume_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -11257,6 +13129,45 @@ func (ind *Equivolume) Update(open float64, high float64, low float64, close flo
 		return EquivolumeOutput{}, false
 	}
 	return EquivolumeOutput{float64(out.height), float64(out.width)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Equivolume) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []EquivolumeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]EquivolumeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraEquivolumeOutput, n)
+	C.wickra_equivolume_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = EquivolumeOutput{float64(buf[i].height), float64(buf[i].width)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -11323,6 +13234,64 @@ func (ind *EstimatedLeverageRatio) Update(fundingRate float64, markPrice float64
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *EstimatedLeverageRatio) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_estimated_leverage_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *EstimatedLeverageRatio) Reset() {
 	C.wickra_estimated_leverage_ratio_reset(ind.handle)
@@ -11347,6 +13316,14 @@ type EvenBetterSinewave struct {
 // NewEvenBetterSinewave constructs a EvenBetterSinewave. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEvenBetterSinewave(hpPeriod int, ssfLength int) (*EvenBetterSinewave, error) {
+	if hpPeriod < 0 {
+		return nil, fmt.Errorf("%w: hpPeriod must not be negative, got %d",
+			ErrInvalidParams, hpPeriod)
+	}
+	if ssfLength < 0 {
+		return nil, fmt.Errorf("%w: ssfLength must not be negative, got %d",
+			ErrInvalidParams, ssfLength)
+	}
 	ptr := C.wickra_even_better_sinewave_new(C.uintptr_t(hpPeriod), C.uintptr_t(ssfLength))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -11523,6 +13500,10 @@ type Evwma struct {
 // NewEvwma constructs a Evwma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewEvwma(period int) (*Evwma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_evwma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -11699,6 +13680,10 @@ type Expectancy struct {
 // NewExpectancy constructs a Expectancy. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewExpectancy(period int) (*Expectancy, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_expectancy_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -11997,6 +13982,45 @@ func (ind *FibArcs) Update(open float64, high float64, low float64, close float6
 	return FibArcsOutput{float64(out.arc_382), float64(out.arc_500), float64(out.arc_618)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibArcs) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibArcsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibArcsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibArcsOutput, n)
+	C.wickra_fib_arcs_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibArcsOutput{float64(buf[i].arc_382), float64(buf[i].arc_500), float64(buf[i].arc_618)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FibArcs) Reset() {
 	C.wickra_fib_arcs_reset(ind.handle)
@@ -12063,6 +14087,45 @@ func (ind *FibChannel) Update(open float64, high float64, low float64, close flo
 		return FibChannelOutput{}, false
 	}
 	return FibChannelOutput{float64(out.base), float64(out.level_618), float64(out.level_1000), float64(out.level_1618)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibChannel) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibChannelOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibChannelOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibChannelOutput, n)
+	C.wickra_fib_channel_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibChannelOutput{float64(buf[i].base), float64(buf[i].level_618), float64(buf[i].level_1000), float64(buf[i].level_1618)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -12133,6 +14196,45 @@ func (ind *FibConfluence) Update(open float64, high float64, low float64, close 
 	return FibConfluenceOutput{float64(out.price), float64(out.strength)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibConfluence) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibConfluenceOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibConfluenceOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibConfluenceOutput, n)
+	C.wickra_fib_confluence_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibConfluenceOutput{float64(buf[i].price), float64(buf[i].strength)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FibConfluence) Reset() {
 	C.wickra_fib_confluence_reset(ind.handle)
@@ -12199,6 +14301,45 @@ func (ind *FibExtension) Update(open float64, high float64, low float64, close f
 		return FibExtensionOutput{}, false
 	}
 	return FibExtensionOutput{float64(out.level_1272), float64(out.level_1414), float64(out.level_1618), float64(out.level_2000), float64(out.level_2618)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibExtension) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibExtensionOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibExtensionOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibExtensionOutput, n)
+	C.wickra_fib_extension_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibExtensionOutput{float64(buf[i].level_1272), float64(buf[i].level_1414), float64(buf[i].level_1618), float64(buf[i].level_2000), float64(buf[i].level_2618)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -12269,6 +14410,45 @@ func (ind *FibFan) Update(open float64, high float64, low float64, close float64
 	return FibFanOutput{float64(out.fan_382), float64(out.fan_500), float64(out.fan_618)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibFan) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibFanOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibFanOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibFanOutput, n)
+	C.wickra_fib_fan_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibFanOutput{float64(buf[i].fan_382), float64(buf[i].fan_500), float64(buf[i].fan_618)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FibFan) Reset() {
 	C.wickra_fib_fan_reset(ind.handle)
@@ -12335,6 +14515,45 @@ func (ind *FibProjection) Update(open float64, high float64, low float64, close 
 		return FibProjectionOutput{}, false
 	}
 	return FibProjectionOutput{float64(out.level_618), float64(out.level_1000), float64(out.level_1618), float64(out.level_2618)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibProjection) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibProjectionOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibProjectionOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibProjectionOutput, n)
+	C.wickra_fib_projection_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibProjectionOutput{float64(buf[i].level_618), float64(buf[i].level_1000), float64(buf[i].level_1618), float64(buf[i].level_2618)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -12405,6 +14624,45 @@ func (ind *FibRetracement) Update(open float64, high float64, low float64, close
 	return FibRetracementOutput{float64(out.level_0), float64(out.level_236), float64(out.level_382), float64(out.level_500), float64(out.level_618), float64(out.level_786), float64(out.level_1000)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibRetracement) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibRetracementOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibRetracementOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibRetracementOutput, n)
+	C.wickra_fib_retracement_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibRetracementOutput{float64(buf[i].level_0), float64(buf[i].level_236), float64(buf[i].level_382), float64(buf[i].level_500), float64(buf[i].level_618), float64(buf[i].level_786), float64(buf[i].level_1000)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FibRetracement) Reset() {
 	C.wickra_fib_retracement_reset(ind.handle)
@@ -12471,6 +14729,45 @@ func (ind *FibTimeZones) Update(open float64, high float64, low float64, close f
 		return FibTimeZonesOutput{}, false
 	}
 	return FibTimeZonesOutput{float64(out.on_zone), float64(out.bars_to_next)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibTimeZones) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibTimeZonesOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibTimeZonesOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibTimeZonesOutput, n)
+	C.wickra_fib_time_zones_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibTimeZonesOutput{float64(buf[i].on_zone), float64(buf[i].bars_to_next)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -12541,6 +14838,45 @@ func (ind *FibonacciPivots) Update(open float64, high float64, low float64, clos
 	return FibonacciPivotsOutput{float64(out.pp), float64(out.r1), float64(out.r2), float64(out.r3), float64(out.s1), float64(out.s2), float64(out.s3)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FibonacciPivots) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FibonacciPivotsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FibonacciPivotsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFibonacciPivotsOutput, n)
+	C.wickra_fibonacci_pivots_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FibonacciPivotsOutput{float64(buf[i].pp), float64(buf[i].r1), float64(buf[i].r2), float64(buf[i].r3), float64(buf[i].s1), float64(buf[i].s2), float64(buf[i].s3)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FibonacciPivots) Reset() {
 	C.wickra_fibonacci_pivots_reset(ind.handle)
@@ -12565,6 +14901,10 @@ type FisherRsi struct {
 // NewFisherRsi constructs a FisherRsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFisherRsi(period int) (*FisherRsi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_fisher_rsi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -12643,6 +14983,10 @@ type FisherTransform struct {
 // NewFisherTransform constructs a FisherTransform. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFisherTransform(period int) (*FisherTransform, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_fisher_transform_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -12862,7 +15206,56 @@ func (ind *Footprint) Update(price float64, size float64, isBuy bool, timestamp 
 		return nil
 	}
 	out := make([]FootprintLevel, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = FootprintLevel{float64(buf[i].price), float64(buf[i].bid_vol), float64(buf[i].ask_vol)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraFootprintLevel, n-capacity)
+		got := int(C.wickra_footprint_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = FootprintLevel{float64(rest[i].price), float64(rest[i].bid_vol), float64(rest[i].ask_vol)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *Footprint) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []FootprintLevel {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_footprint_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraFootprintLevel, total)
+	got := int(C.wickra_footprint_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]FootprintLevel, got)
+	for i := 0; i < got; i++ {
 		out[i] = FootprintLevel{float64(buf[i].price), float64(buf[i].bid_vol), float64(buf[i].ask_vol)}
 	}
 	return out
@@ -12892,6 +15285,10 @@ type ForceIndex struct {
 // NewForceIndex constructs a ForceIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewForceIndex(period int) (*ForceIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_force_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -12990,6 +15387,10 @@ type FractalChaosBands struct {
 // NewFractalChaosBands constructs a FractalChaosBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFractalChaosBands(k int) (*FractalChaosBands, error) {
+	if k < 0 {
+		return nil, fmt.Errorf("%w: k must not be negative, got %d",
+			ErrInvalidParams, k)
+	}
 	ptr := C.wickra_fractal_chaos_bands_new(C.uintptr_t(k))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13034,6 +15435,45 @@ func (ind *FractalChaosBands) Update(open float64, high float64, low float64, cl
 	return FractalChaosBandsOutput{float64(out.upper), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *FractalChaosBands) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []FractalChaosBandsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]FractalChaosBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraFractalChaosBandsOutput, n)
+	C.wickra_fractal_chaos_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = FractalChaosBandsOutput{float64(buf[i].upper), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FractalChaosBands) Reset() {
 	C.wickra_fractal_chaos_bands_reset(ind.handle)
@@ -13058,6 +15498,10 @@ type Frama struct {
 // NewFrama constructs a Frama. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFrama(period int) (*Frama, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_frama_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13136,6 +15580,10 @@ type FryPanBottom struct {
 // NewFryPanBottom constructs a FryPanBottom. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFryPanBottom(period int) (*FryPanBottom, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_fry_pan_bottom_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13274,6 +15722,64 @@ func (ind *FundingBasis) Update(fundingRate float64, markPrice float64, indexPri
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *FundingBasis) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_funding_basis_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FundingBasis) Reset() {
 	C.wickra_funding_basis_reset(ind.handle)
@@ -13336,6 +15842,64 @@ func (ind *FundingImpliedApr) Update(fundingRate float64, markPrice float64, ind
 	r := float64(C.wickra_funding_implied_apr_update(ind.handle, C.double(fundingRate), C.double(markPrice), C.double(indexPrice), C.double(futuresPrice), C.double(openInterest), C.double(longSize), C.double(shortSize), C.double(takerBuyVolume), C.double(takerSellVolume), C.double(longLiquidation), C.double(shortLiquidation), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *FundingImpliedApr) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_funding_implied_apr_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -13402,6 +15966,64 @@ func (ind *FundingRate) Update(fundingRate float64, markPrice float64, indexPric
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *FundingRate) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_funding_rate_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FundingRate) Reset() {
 	C.wickra_funding_rate_reset(ind.handle)
@@ -13426,6 +16048,10 @@ type FundingRateMean struct {
 // NewFundingRateMean constructs a FundingRateMean. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFundingRateMean(window int) (*FundingRateMean, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
 	ptr := C.wickra_funding_rate_mean_new(C.uintptr_t(window))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13466,6 +16092,64 @@ func (ind *FundingRateMean) Update(fundingRate float64, markPrice float64, index
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *FundingRateMean) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_funding_rate_mean_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FundingRateMean) Reset() {
 	C.wickra_funding_rate_mean_reset(ind.handle)
@@ -13490,6 +16174,10 @@ type FundingRateZScore struct {
 // NewFundingRateZScore constructs a FundingRateZScore. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewFundingRateZScore(window int) (*FundingRateZScore, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
 	ptr := C.wickra_funding_rate_z_score_new(C.uintptr_t(window))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13530,6 +16218,64 @@ func (ind *FundingRateZScore) Update(fundingRate float64, markPrice float64, ind
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *FundingRateZScore) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_funding_rate_z_score_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *FundingRateZScore) Reset() {
 	C.wickra_funding_rate_z_score_reset(ind.handle)
@@ -13554,6 +16300,10 @@ type GainLossRatio struct {
 // NewGainLossRatio constructs a GainLossRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGainLossRatio(period int) (*GainLossRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_gain_loss_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13632,6 +16382,10 @@ type GainToPainRatio struct {
 // NewGainToPainRatio constructs a GainToPainRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGainToPainRatio(period int) (*GainToPainRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_gain_to_pain_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -13886,6 +16640,14 @@ type GarmanKlassVolatility struct {
 // NewGarmanKlassVolatility constructs a GarmanKlassVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGarmanKlassVolatility(period int, tradingPeriods int) (*GarmanKlassVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if tradingPeriods < 0 {
+		return nil, fmt.Errorf("%w: tradingPeriods must not be negative, got %d",
+			ErrInvalidParams, tradingPeriods)
+	}
 	ptr := C.wickra_garman_klass_volatility_new(C.uintptr_t(period), C.uintptr_t(tradingPeriods))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -14082,6 +16844,18 @@ type GatorOscillator struct {
 // NewGatorOscillator constructs a GatorOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGatorOscillator(jawPeriod int, teethPeriod int, lipsPeriod int) (*GatorOscillator, error) {
+	if jawPeriod < 0 {
+		return nil, fmt.Errorf("%w: jawPeriod must not be negative, got %d",
+			ErrInvalidParams, jawPeriod)
+	}
+	if teethPeriod < 0 {
+		return nil, fmt.Errorf("%w: teethPeriod must not be negative, got %d",
+			ErrInvalidParams, teethPeriod)
+	}
+	if lipsPeriod < 0 {
+		return nil, fmt.Errorf("%w: lipsPeriod must not be negative, got %d",
+			ErrInvalidParams, lipsPeriod)
+	}
 	ptr := C.wickra_gator_oscillator_new(C.uintptr_t(jawPeriod), C.uintptr_t(teethPeriod), C.uintptr_t(lipsPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -14126,6 +16900,45 @@ func (ind *GatorOscillator) Update(open float64, high float64, low float64, clos
 	return GatorOscillatorOutput{float64(out.upper), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *GatorOscillator) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []GatorOscillatorOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]GatorOscillatorOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraGatorOscillatorOutput, n)
+	C.wickra_gator_oscillator_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = GatorOscillatorOutput{float64(buf[i].upper), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *GatorOscillator) Reset() {
 	C.wickra_gator_oscillator_reset(ind.handle)
@@ -14150,6 +16963,10 @@ type GeneralizedDema struct {
 // NewGeneralizedDema constructs a GeneralizedDema. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGeneralizedDema(period int, v float64) (*GeneralizedDema, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_generalized_dema_new(C.uintptr_t(period), C.double(v))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -14228,6 +17045,10 @@ type GeometricMa struct {
 // NewGeometricMa constructs a GeometricMa. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGeometricMa(period int) (*GeometricMa, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_geometric_ma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -14350,6 +17171,45 @@ func (ind *GoldenPocket) Update(open float64, high float64, low float64, close f
 	return GoldenPocketOutput{float64(out.low), float64(out.mid), float64(out.high)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *GoldenPocket) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []GoldenPocketOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]GoldenPocketOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraGoldenPocketOutput, n)
+	C.wickra_golden_pocket_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = GoldenPocketOutput{float64(buf[i].low), float64(buf[i].mid), float64(buf[i].high)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *GoldenPocket) Reset() {
 	C.wickra_golden_pocket_reset(ind.handle)
@@ -14374,6 +17234,14 @@ type GrangerCausality struct {
 // NewGrangerCausality constructs a GrangerCausality. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewGrangerCausality(period int, lag int) (*GrangerCausality, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if lag < 0 {
+		return nil, fmt.Errorf("%w: lag must not be negative, got %d",
+			ErrInvalidParams, lag)
+	}
 	ptr := C.wickra_granger_causality_new(C.uintptr_t(period), C.uintptr_t(lag))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -14946,6 +17814,10 @@ type HasbrouckInformationShare struct {
 // NewHasbrouckInformationShare constructs a HasbrouckInformationShare. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHasbrouckInformationShare(period int) (*HasbrouckInformationShare, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_hasbrouck_information_share_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -15170,6 +18042,45 @@ func (ind *HeikinAshi) Update(open float64, high float64, low float64, close flo
 	return HeikinAshiOutput{float64(out.open), float64(out.high), float64(out.low), float64(out.close)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *HeikinAshi) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []HeikinAshiOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]HeikinAshiOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraHeikinAshiOutput, n)
+	C.wickra_heikin_ashi_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = HeikinAshiOutput{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *HeikinAshi) Reset() {
 	C.wickra_heikin_ashi_reset(ind.handle)
@@ -15194,6 +18105,10 @@ type HeikinAshiOscillator struct {
 // NewHeikinAshiOscillator constructs a HeikinAshiOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHeikinAshiOscillator(period int) (*HeikinAshiOscillator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_heikin_ashi_oscillator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -15292,6 +18207,10 @@ type HiLoActivator struct {
 // NewHiLoActivator constructs a HiLoActivator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHiLoActivator(period int) (*HiLoActivator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_hi_lo_activator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -15390,6 +18309,10 @@ type HighLowIndex struct {
 // NewHighLowIndex constructs a HighLowIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHighLowIndex(period int) (*HighLowIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_high_low_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -15449,6 +18372,51 @@ func (ind *HighLowIndex) Update(change []float64, volume []float64, newHigh []bo
 	runtime.KeepAlive(aboveMa)
 	runtime.KeepAlive(onBuySignal)
 	return r
+}
+
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *HighLowIndex) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_high_low_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -15573,6 +18541,14 @@ type HighLowVolumeNodes struct {
 // NewHighLowVolumeNodes constructs a HighLowVolumeNodes. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHighLowVolumeNodes(period int, bins int) (*HighLowVolumeNodes, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if bins < 0 {
+		return nil, fmt.Errorf("%w: bins must not be negative, got %d",
+			ErrInvalidParams, bins)
+	}
 	ptr := C.wickra_high_low_volume_nodes_new(C.uintptr_t(period), C.uintptr_t(bins))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -15615,6 +18591,45 @@ func (ind *HighLowVolumeNodes) Update(open float64, high float64, low float64, c
 		return HighLowVolumeNodesOutput{}, false
 	}
 	return HighLowVolumeNodesOutput{float64(out.hvn), float64(out.lvn)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *HighLowVolumeNodes) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []HighLowVolumeNodesOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]HighLowVolumeNodesOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraHighLowVolumeNodesOutput, n)
+	C.wickra_high_low_volume_nodes_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = HighLowVolumeNodesOutput{float64(buf[i].hvn), float64(buf[i].lvn)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -15739,6 +18754,10 @@ type HighpassFilter struct {
 // NewHighpassFilter constructs a HighpassFilter. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHighpassFilter(period int) (*HighpassFilter, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_highpass_filter_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -16091,6 +19110,14 @@ type HistoricalVolatility struct {
 // NewHistoricalVolatility constructs a HistoricalVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHistoricalVolatility(period int, tradingPeriods int) (*HistoricalVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if tradingPeriods < 0 {
+		return nil, fmt.Errorf("%w: tradingPeriods must not be negative, got %d",
+			ErrInvalidParams, tradingPeriods)
+	}
 	ptr := C.wickra_historical_volatility_new(C.uintptr_t(period), C.uintptr_t(tradingPeriods))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -16169,6 +19196,10 @@ type Hma struct {
 // NewHma constructs a Hma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHma(period int) (*Hma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_hma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -16545,6 +19576,25 @@ func (ind *HtPhasor) Update(value float64) (HtPhasorOutput, bool) {
 	return HtPhasorOutput{float64(out.inphase), float64(out.quadrature)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *HtPhasor) Batch(input []float64) []HtPhasorOutput {
+	n := len(input)
+	out := make([]HtPhasorOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraHtPhasorOutput, n)
+	C.wickra_ht_phasor_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = HtPhasorOutput{float64(buf[i].inphase), float64(buf[i].quadrature)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *HtPhasor) Reset() {
 	C.wickra_ht_phasor_reset(ind.handle)
@@ -16647,6 +19697,10 @@ type HurstChannel struct {
 // NewHurstChannel constructs a HurstChannel. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHurstChannel(period int, multiplier float64) (*HurstChannel, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_hurst_channel_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -16691,6 +19745,45 @@ func (ind *HurstChannel) Update(open float64, high float64, low float64, close f
 	return HurstChannelOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *HurstChannel) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []HurstChannelOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]HurstChannelOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraHurstChannelOutput, n)
+	C.wickra_hurst_channel_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = HurstChannelOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *HurstChannel) Reset() {
 	C.wickra_hurst_channel_reset(ind.handle)
@@ -16715,6 +19808,14 @@ type HurstExponent struct {
 // NewHurstExponent constructs a HurstExponent. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewHurstExponent(period int, chunks int) (*HurstExponent, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if chunks < 0 {
+		return nil, fmt.Errorf("%w: chunks must not be negative, got %d",
+			ErrInvalidParams, chunks)
+	}
 	ptr := C.wickra_hurst_exponent_new(C.uintptr_t(period), C.uintptr_t(chunks))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -16793,6 +19894,22 @@ type Ichimoku struct {
 // NewIchimoku constructs a Ichimoku. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewIchimoku(tenkanPeriod int, kijunPeriod int, senkouBPeriod int, displacement int) (*Ichimoku, error) {
+	if tenkanPeriod < 0 {
+		return nil, fmt.Errorf("%w: tenkanPeriod must not be negative, got %d",
+			ErrInvalidParams, tenkanPeriod)
+	}
+	if kijunPeriod < 0 {
+		return nil, fmt.Errorf("%w: kijunPeriod must not be negative, got %d",
+			ErrInvalidParams, kijunPeriod)
+	}
+	if senkouBPeriod < 0 {
+		return nil, fmt.Errorf("%w: senkouBPeriod must not be negative, got %d",
+			ErrInvalidParams, senkouBPeriod)
+	}
+	if displacement < 0 {
+		return nil, fmt.Errorf("%w: displacement must not be negative, got %d",
+			ErrInvalidParams, displacement)
+	}
 	ptr := C.wickra_ichimoku_new(C.uintptr_t(tenkanPeriod), C.uintptr_t(kijunPeriod), C.uintptr_t(senkouBPeriod), C.uintptr_t(displacement))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -16835,6 +19952,45 @@ func (ind *Ichimoku) Update(open float64, high float64, low float64, close float
 		return IchimokuOutput{}, false
 	}
 	return IchimokuOutput{float64(out.tenkan), float64(out.kijun), float64(out.senkou_a), float64(out.senkou_b), float64(out.chikou)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Ichimoku) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []IchimokuOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]IchimokuOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraIchimokuOutput, n)
+	C.wickra_ichimoku_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = IchimokuOutput{float64(buf[i].tenkan), float64(buf[i].kijun), float64(buf[i].senkou_a), float64(buf[i].senkou_b), float64(buf[i].chikou)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -16986,7 +20142,64 @@ func (ind *ImbalanceBars) Update(open float64, high float64, low float64, close 
 		return nil
 	}
 	out := make([]ImbalanceBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = ImbalanceBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].imbalance), int8(buf[i].direction)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraImbalanceBar, n-capacity)
+		got := int(C.wickra_imbalance_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = ImbalanceBar{float64(rest[i].open), float64(rest[i].high), float64(rest[i].low), float64(rest[i].close), float64(rest[i].imbalance), int8(rest[i].direction)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *ImbalanceBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ImbalanceBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_imbalance_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraImbalanceBar, total)
+	got := int(C.wickra_imbalance_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]ImbalanceBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = ImbalanceBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].imbalance), int8(buf[i].direction)}
 	}
 	return out
@@ -17114,6 +20327,14 @@ type Inertia struct {
 // NewInertia constructs a Inertia. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewInertia(rviPeriod int, linregPeriod int) (*Inertia, error) {
+	if rviPeriod < 0 {
+		return nil, fmt.Errorf("%w: rviPeriod must not be negative, got %d",
+			ErrInvalidParams, rviPeriod)
+	}
+	if linregPeriod < 0 {
+		return nil, fmt.Errorf("%w: linregPeriod must not be negative, got %d",
+			ErrInvalidParams, linregPeriod)
+	}
 	ptr := C.wickra_inertia_new(C.uintptr_t(rviPeriod), C.uintptr_t(linregPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -17212,6 +20433,10 @@ type InformationRatio struct {
 // NewInformationRatio constructs a InformationRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewInformationRatio(period int) (*InformationRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_information_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -17294,6 +20519,10 @@ type InitialBalance struct {
 // NewInitialBalance constructs a InitialBalance. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewInitialBalance(period int) (*InitialBalance, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_initial_balance_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -17338,6 +20567,45 @@ func (ind *InitialBalance) Update(open float64, high float64, low float64, close
 	return InitialBalanceOutput{float64(out.high), float64(out.low)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *InitialBalance) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []InitialBalanceOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]InitialBalanceOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraInitialBalanceOutput, n)
+	C.wickra_initial_balance_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = InitialBalanceOutput{float64(buf[i].high), float64(buf[i].low)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *InitialBalance) Reset() {
 	C.wickra_initial_balance_reset(ind.handle)
@@ -17362,6 +20630,10 @@ type InstantaneousTrendline struct {
 // NewInstantaneousTrendline constructs a InstantaneousTrendline. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewInstantaneousTrendline(period int) (*InstantaneousTrendline, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_instantaneous_trendline_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -17538,6 +20810,10 @@ type IntradayMomentumIndex struct {
 // NewIntradayMomentumIndex constructs a IntradayMomentumIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewIntradayMomentumIndex(period int) (*IntradayMomentumIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_intraday_momentum_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -17637,12 +20913,16 @@ type IntradayVolatilityProfile struct {
 // NewIntradayVolatilityProfile constructs a IntradayVolatilityProfile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewIntradayVolatilityProfile(buckets int, utcOffsetMinutes int32) (*IntradayVolatilityProfile, error) {
+	if buckets < 0 {
+		return nil, fmt.Errorf("%w: buckets must not be negative, got %d",
+			ErrInvalidParams, buckets)
+	}
 	ptr := C.wickra_intraday_volatility_profile_new(C.uintptr_t(buckets), C.int32_t(utcOffsetMinutes))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
 	obj := &IntradayVolatilityProfile{handle: ptr}
-	obj.valuesCap = buckets
+	obj.valuesCap = int(C.wickra_intraday_volatility_profile_width(ptr))
 	runtime.SetFinalizer(obj, (*IntradayVolatilityProfile).Close)
 	return obj, nil
 }
@@ -17680,6 +20960,45 @@ func (ind *IntradayVolatilityProfile) Update(open float64, high float64, low flo
 		return nil, false
 	}
 	return values[:n], true
+}
+
+// Batch feeds a whole series in one FFI call and returns one profile per
+// input. A row the indicator did not produce carries NaN.
+func (ind *IntradayVolatilityProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) [][]float64 {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	width := ind.valuesCap
+	flat := make([]float64, n*width)
+	C.wickra_intraday_volatility_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&flat[0])), C.uintptr_t(width), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	out := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		out[i] = flat[i*width : (i+1)*width]
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -17882,6 +21201,10 @@ type JarqueBera struct {
 // NewJarqueBera constructs a JarqueBera. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewJarqueBera(period int) (*JarqueBera, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_jarque_bera_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -17960,6 +21283,10 @@ type Jma struct {
 // NewJma constructs a Jma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewJma(period int, phase float64, power uint32) (*Jma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_jma_new(C.uintptr_t(period), C.double(phase), C.uint32_t(power))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18038,6 +21365,10 @@ type JumpIndicator struct {
 // NewJumpIndicator constructs a JumpIndicator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewJumpIndicator(period int, threshold float64) (*JumpIndicator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_jump_indicator_new(C.uintptr_t(period), C.double(threshold))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18116,6 +21447,10 @@ type KRatio struct {
 // NewKRatio constructs a KRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKRatio(period int) (*KRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_k_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18221,7 +21556,64 @@ func (ind *KagiBars) Update(open float64, high float64, low float64, close float
 		return nil
 	}
 	out := make([]KagiBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = KagiBar{float64(buf[i].start), float64(buf[i].end), int8(buf[i].direction)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraKagiBar, n-capacity)
+		got := int(C.wickra_kagi_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = KagiBar{float64(rest[i].start), float64(rest[i].end), int8(rest[i].direction)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *KagiBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []KagiBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_kagi_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraKagiBar, total)
+	got := int(C.wickra_kagi_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]KagiBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = KagiBar{float64(buf[i].start), float64(buf[i].end), int8(buf[i].direction)}
 	}
 	return out
@@ -18295,6 +21687,29 @@ func (ind *KalmanHedgeRatio) Update(x float64, y float64) (KalmanHedgeRatioOutpu
 	return KalmanHedgeRatioOutput{float64(out.hedge_ratio), float64(out.intercept), float64(out.spread)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *KalmanHedgeRatio) Batch(x []float64, y []float64) []KalmanHedgeRatioOutput {
+	n := len(x)
+	if len(y) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]KalmanHedgeRatioOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraKalmanHedgeRatioOutput, n)
+	C.wickra_kalman_hedge_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&x[0])), (*C.double)(unsafe.Pointer(&y[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(x)
+	runtime.KeepAlive(y)
+	for i := range buf {
+		out[i] = KalmanHedgeRatioOutput{float64(buf[i].hedge_ratio), float64(buf[i].intercept), float64(buf[i].spread)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *KalmanHedgeRatio) Reset() {
 	C.wickra_kalman_hedge_ratio_reset(ind.handle)
@@ -18319,6 +21734,18 @@ type Kama struct {
 // NewKama constructs a Kama. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKama(erPeriod int, fast int, slow int) (*Kama, error) {
+	if erPeriod < 0 {
+		return nil, fmt.Errorf("%w: erPeriod must not be negative, got %d",
+			ErrInvalidParams, erPeriod)
+	}
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_kama_new(C.uintptr_t(erPeriod), C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18397,6 +21824,10 @@ type KaseDevStop struct {
 // NewKaseDevStop constructs a KaseDevStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKaseDevStop(period int, dev float64) (*KaseDevStop, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_kase_dev_stop_new(C.uintptr_t(period), C.double(dev))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18441,6 +21872,45 @@ func (ind *KaseDevStop) Update(open float64, high float64, low float64, close fl
 	return KaseDevStopOutput{float64(out.value), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *KaseDevStop) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []KaseDevStopOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]KaseDevStopOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraKaseDevStopOutput, n)
+	C.wickra_kase_dev_stop_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = KaseDevStopOutput{float64(buf[i].value), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *KaseDevStop) Reset() {
 	C.wickra_kase_dev_stop_reset(ind.handle)
@@ -18465,6 +21935,14 @@ type KasePermissionStochastic struct {
 // NewKasePermissionStochastic constructs a KasePermissionStochastic. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKasePermissionStochastic(length int, smooth int) (*KasePermissionStochastic, error) {
+	if length < 0 {
+		return nil, fmt.Errorf("%w: length must not be negative, got %d",
+			ErrInvalidParams, length)
+	}
+	if smooth < 0 {
+		return nil, fmt.Errorf("%w: smooth must not be negative, got %d",
+			ErrInvalidParams, smooth)
+	}
 	ptr := C.wickra_kase_permission_stochastic_new(C.uintptr_t(length), C.uintptr_t(smooth))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18509,6 +21987,45 @@ func (ind *KasePermissionStochastic) Update(open float64, high float64, low floa
 	return KasePermissionStochasticOutput{float64(out.fast), float64(out.slow)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *KasePermissionStochastic) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []KasePermissionStochasticOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]KasePermissionStochasticOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraKasePermissionStochasticOutput, n)
+	C.wickra_kase_permission_stochastic_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = KasePermissionStochasticOutput{float64(buf[i].fast), float64(buf[i].slow)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *KasePermissionStochastic) Reset() {
 	C.wickra_kase_permission_stochastic_reset(ind.handle)
@@ -18533,6 +22050,10 @@ type KellyCriterion struct {
 // NewKellyCriterion constructs a KellyCriterion. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKellyCriterion(period int) (*KellyCriterion, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_kelly_criterion_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18611,6 +22132,14 @@ type Keltner struct {
 // NewKeltner constructs a Keltner. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKeltner(emaPeriod int, atrPeriod int, multiplier float64) (*Keltner, error) {
+	if emaPeriod < 0 {
+		return nil, fmt.Errorf("%w: emaPeriod must not be negative, got %d",
+			ErrInvalidParams, emaPeriod)
+	}
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_keltner_new(C.uintptr_t(emaPeriod), C.uintptr_t(atrPeriod), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18655,6 +22184,45 @@ func (ind *Keltner) Update(open float64, high float64, low float64, close float6
 	return KeltnerOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Keltner) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []KeltnerOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]KeltnerOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraKeltnerOutput, n)
+	C.wickra_keltner_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = KeltnerOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Keltner) Reset() {
 	C.wickra_keltner_reset(ind.handle)
@@ -18679,6 +22247,10 @@ type KendallTau struct {
 // NewKendallTau constructs a KendallTau. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKendallTau(period int) (*KendallTau, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_kendall_tau_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -18957,6 +22529,42 @@ type Kst struct {
 // NewKst constructs a Kst. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKst(roc1 int, roc2 int, roc3 int, roc4 int, sma1 int, sma2 int, sma3 int, sma4 int, signal int) (*Kst, error) {
+	if roc1 < 0 {
+		return nil, fmt.Errorf("%w: roc1 must not be negative, got %d",
+			ErrInvalidParams, roc1)
+	}
+	if roc2 < 0 {
+		return nil, fmt.Errorf("%w: roc2 must not be negative, got %d",
+			ErrInvalidParams, roc2)
+	}
+	if roc3 < 0 {
+		return nil, fmt.Errorf("%w: roc3 must not be negative, got %d",
+			ErrInvalidParams, roc3)
+	}
+	if roc4 < 0 {
+		return nil, fmt.Errorf("%w: roc4 must not be negative, got %d",
+			ErrInvalidParams, roc4)
+	}
+	if sma1 < 0 {
+		return nil, fmt.Errorf("%w: sma1 must not be negative, got %d",
+			ErrInvalidParams, sma1)
+	}
+	if sma2 < 0 {
+		return nil, fmt.Errorf("%w: sma2 must not be negative, got %d",
+			ErrInvalidParams, sma2)
+	}
+	if sma3 < 0 {
+		return nil, fmt.Errorf("%w: sma3 must not be negative, got %d",
+			ErrInvalidParams, sma3)
+	}
+	if sma4 < 0 {
+		return nil, fmt.Errorf("%w: sma4 must not be negative, got %d",
+			ErrInvalidParams, sma4)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_kst_new(C.uintptr_t(roc1), C.uintptr_t(roc2), C.uintptr_t(roc3), C.uintptr_t(roc4), C.uintptr_t(sma1), C.uintptr_t(sma2), C.uintptr_t(sma3), C.uintptr_t(sma4), C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19001,6 +22609,25 @@ func (ind *Kst) Update(value float64) (KstOutput, bool) {
 	return KstOutput{float64(out.kst), float64(out.signal)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Kst) Batch(input []float64) []KstOutput {
+	n := len(input)
+	out := make([]KstOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraKstOutput, n)
+	C.wickra_kst_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = KstOutput{float64(buf[i].kst), float64(buf[i].signal)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Kst) Reset() {
 	C.wickra_kst_reset(ind.handle)
@@ -19025,6 +22652,10 @@ type Kurtosis struct {
 // NewKurtosis constructs a Kurtosis. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKurtosis(period int) (*Kurtosis, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_kurtosis_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19103,6 +22734,14 @@ type Kvo struct {
 // NewKvo constructs a Kvo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKvo(fast int, slow int) (*Kvo, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_kvo_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19201,6 +22840,10 @@ type KylesLambda struct {
 // NewKylesLambda constructs a KylesLambda. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewKylesLambda(window int) (*KylesLambda, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
 	ptr := C.wickra_kyles_lambda_new(C.uintptr_t(window))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19239,6 +22882,36 @@ func (ind *KylesLambda) Update(price float64, size float64, isBuy bool, timestam
 	r := float64(C.wickra_kyles_lambda_update(ind.handle, C.double(price), C.double(size), C.bool(isBuy), C.int64_t(timestamp), C.double(mid)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *KylesLambda) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64, mid []float64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(mid) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_kyles_lambda_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&mid[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	runtime.KeepAlive(mid)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -19441,6 +23114,14 @@ type LeadLagCrossCorrelation struct {
 // NewLeadLagCrossCorrelation constructs a LeadLagCrossCorrelation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLeadLagCrossCorrelation(window int, maxLag int) (*LeadLagCrossCorrelation, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
+	if maxLag < 0 {
+		return nil, fmt.Errorf("%w: maxLag must not be negative, got %d",
+			ErrInvalidParams, maxLag)
+	}
 	ptr := C.wickra_lead_lag_cross_correlation_new(C.uintptr_t(window), C.uintptr_t(maxLag))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19482,7 +23163,30 @@ func (ind *LeadLagCrossCorrelation) Update(x float64, y float64) (LeadLagCrossCo
 	if !ok {
 		return LeadLagCrossCorrelationOutput{}, false
 	}
-	return LeadLagCrossCorrelationOutput{int64(out.lag), float64(out.correlation)}, true
+	return LeadLagCrossCorrelationOutput{float64(out.lag), float64(out.correlation)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *LeadLagCrossCorrelation) Batch(x []float64, y []float64) []LeadLagCrossCorrelationOutput {
+	n := len(x)
+	if len(y) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]LeadLagCrossCorrelationOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraLeadLagCrossCorrelationOutput, n)
+	C.wickra_lead_lag_cross_correlation_batch(ind.handle, (*C.double)(unsafe.Pointer(&x[0])), (*C.double)(unsafe.Pointer(&y[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(x)
+	runtime.KeepAlive(y)
+	for i := range buf {
+		out[i] = LeadLagCrossCorrelationOutput{float64(buf[i].lag), float64(buf[i].correlation)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -19509,6 +23213,10 @@ type LinRegAngle struct {
 // NewLinRegAngle constructs a LinRegAngle. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLinRegAngle(period int) (*LinRegAngle, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_lin_reg_angle_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19587,6 +23295,10 @@ type LinRegChannel struct {
 // NewLinRegChannel constructs a LinRegChannel. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLinRegChannel(period int, multiplier float64) (*LinRegChannel, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_lin_reg_channel_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19631,6 +23343,25 @@ func (ind *LinRegChannel) Update(value float64) (LinRegChannelOutput, bool) {
 	return LinRegChannelOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *LinRegChannel) Batch(input []float64) []LinRegChannelOutput {
+	n := len(input)
+	out := make([]LinRegChannelOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraLinRegChannelOutput, n)
+	C.wickra_lin_reg_channel_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = LinRegChannelOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *LinRegChannel) Reset() {
 	C.wickra_lin_reg_channel_reset(ind.handle)
@@ -19655,6 +23386,10 @@ type LinRegIntercept struct {
 // NewLinRegIntercept constructs a LinRegIntercept. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLinRegIntercept(period int) (*LinRegIntercept, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_lin_reg_intercept_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19733,6 +23468,10 @@ type LinRegSlope struct {
 // NewLinRegSlope constructs a LinRegSlope. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLinRegSlope(period int) (*LinRegSlope, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_lin_reg_slope_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19811,6 +23550,10 @@ type LinearRegression struct {
 // NewLinearRegression constructs a LinearRegression. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLinearRegression(period int) (*LinearRegression, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_linear_regression_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -19933,6 +23676,69 @@ func (ind *LiquidationFeatures) Update(fundingRate float64, markPrice float64, i
 	return LiquidationFeaturesOutput{float64(out.long_), float64(out.short_), float64(out.net), float64(out.total), float64(out.imbalance)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *LiquidationFeatures) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []LiquidationFeaturesOutput {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]LiquidationFeaturesOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraLiquidationFeaturesOutput, n)
+	C.wickra_liquidation_features_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = LiquidationFeaturesOutput{float64(buf[i].long_), float64(buf[i].short_), float64(buf[i].net), float64(buf[i].total), float64(buf[i].imbalance)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *LiquidationFeatures) Reset() {
 	C.wickra_liquidation_features_reset(ind.handle)
@@ -19957,6 +23763,10 @@ type LogReturn struct {
 // NewLogReturn constructs a LogReturn. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewLogReturn(period int) (*LogReturn, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_log_return_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20271,6 +24081,64 @@ func (ind *LongShortRatio) Update(fundingRate float64, markPrice float64, indexP
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *LongShortRatio) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_long_short_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *LongShortRatio) Reset() {
 	C.wickra_long_short_ratio_reset(ind.handle)
@@ -20295,6 +24163,10 @@ type M2Measure struct {
 // NewM2Measure constructs a M2Measure. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewM2Measure(period int, riskFree float64, benchmarkStddev float64) (*M2Measure, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_m2_measure_new(C.uintptr_t(period), C.double(riskFree), C.double(benchmarkStddev))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20373,6 +24245,10 @@ type MaEnvelope struct {
 // NewMaEnvelope constructs a MaEnvelope. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMaEnvelope(period int, percent float64) (*MaEnvelope, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ma_envelope_new(C.uintptr_t(period), C.double(percent))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20417,6 +24293,25 @@ func (ind *MaEnvelope) Update(value float64) (MaEnvelopeOutput, bool) {
 	return MaEnvelopeOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *MaEnvelope) Batch(input []float64) []MaEnvelopeOutput {
+	n := len(input)
+	out := make([]MaEnvelopeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMaEnvelopeOutput, n)
+	C.wickra_ma_envelope_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = MaEnvelopeOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *MaEnvelope) Reset() {
 	C.wickra_ma_envelope_reset(ind.handle)
@@ -20441,6 +24336,18 @@ type MacdExt struct {
 // NewMacdExt constructs a MacdExt. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMacdExt(fast int, fastType uint8, slow int, slowType uint8, signal int, signalType uint8) (*MacdExt, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_macd_ext_new(C.uintptr_t(fast), C.uint8_t(fastType), C.uintptr_t(slow), C.uint8_t(slowType), C.uintptr_t(signal), C.uint8_t(signalType))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20485,6 +24392,25 @@ func (ind *MacdExt) Update(value float64) (MacdOutput, bool) {
 	return MacdOutput{float64(out.macd), float64(out.signal), float64(out.histogram)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *MacdExt) Batch(input []float64) []MacdOutput {
+	n := len(input)
+	out := make([]MacdOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMacdOutput, n)
+	C.wickra_macd_ext_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = MacdOutput{float64(buf[i].macd), float64(buf[i].signal), float64(buf[i].histogram)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *MacdExt) Reset() {
 	C.wickra_macd_ext_reset(ind.handle)
@@ -20509,6 +24435,10 @@ type MacdFix struct {
 // NewMacdFix constructs a MacdFix. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMacdFix(signal int) (*MacdFix, error) {
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_macd_fix_new(C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20553,6 +24483,25 @@ func (ind *MacdFix) Update(value float64) (MacdOutput, bool) {
 	return MacdOutput{float64(out.macd), float64(out.signal), float64(out.histogram)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *MacdFix) Batch(input []float64) []MacdOutput {
+	n := len(input)
+	out := make([]MacdOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMacdOutput, n)
+	C.wickra_macd_fix_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = MacdOutput{float64(buf[i].macd), float64(buf[i].signal), float64(buf[i].histogram)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *MacdFix) Reset() {
 	C.wickra_macd_fix_reset(ind.handle)
@@ -20577,6 +24526,18 @@ type MacdHistogram struct {
 // NewMacdHistogram constructs a MacdHistogram. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMacdHistogram(fast int, slow int, signal int) (*MacdHistogram, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_macd_histogram_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20655,6 +24616,18 @@ type MacdIndicator struct {
 // NewMacdIndicator constructs a MacdIndicator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMacdIndicator(fast int, slow int, signal int) (*MacdIndicator, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_macd_indicator_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -20697,6 +24670,25 @@ func (ind *MacdIndicator) Update(value float64) (MacdOutput, bool) {
 		return MacdOutput{}, false
 	}
 	return MacdOutput{float64(out.macd), float64(out.signal), float64(out.histogram)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *MacdIndicator) Batch(input []float64) []MacdOutput {
+	n := len(input)
+	out := make([]MacdOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMacdOutput, n)
+	C.wickra_macd_indicator_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = MacdOutput{float64(buf[i].macd), float64(buf[i].signal), float64(buf[i].histogram)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -20765,6 +24757,25 @@ func (ind *Mama) Update(value float64) (MamaOutput, bool) {
 		return MamaOutput{}, false
 	}
 	return MamaOutput{float64(out.mama), float64(out.fama)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Mama) Batch(input []float64) []MamaOutput {
+	n := len(input)
+	out := make([]MamaOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMamaOutput, n)
+	C.wickra_mama_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = MamaOutput{float64(buf[i].mama), float64(buf[i].fama)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -20889,6 +24900,10 @@ type MartinRatio struct {
 // NewMartinRatio constructs a MartinRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMartinRatio(period int) (*MartinRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_martin_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -21065,6 +25080,14 @@ type MassIndex struct {
 // NewMassIndex constructs a MassIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMassIndex(emaPeriod int, sumPeriod int) (*MassIndex, error) {
+	if emaPeriod < 0 {
+		return nil, fmt.Errorf("%w: emaPeriod must not be negative, got %d",
+			ErrInvalidParams, emaPeriod)
+	}
+	if sumPeriod < 0 {
+		return nil, fmt.Errorf("%w: sumPeriod must not be negative, got %d",
+			ErrInvalidParams, sumPeriod)
+	}
 	ptr := C.wickra_mass_index_new(C.uintptr_t(emaPeriod), C.uintptr_t(sumPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -21359,6 +25382,10 @@ type MaxDrawdown struct {
 // NewMaxDrawdown constructs a MaxDrawdown. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMaxDrawdown(period int) (*MaxDrawdown, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_max_drawdown_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -21498,6 +25525,51 @@ func (ind *McClellanOscillator) Update(change []float64, volume []float64, newHi
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *McClellanOscillator) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_mc_clellan_oscillator_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *McClellanOscillator) Reset() {
 	C.wickra_mc_clellan_oscillator_reset(ind.handle)
@@ -21583,6 +25655,51 @@ func (ind *McClellanSummationIndex) Update(change []float64, volume []float64, n
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *McClellanSummationIndex) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_mc_clellan_summation_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *McClellanSummationIndex) Reset() {
 	C.wickra_mc_clellan_summation_index_reset(ind.handle)
@@ -21607,6 +25724,10 @@ type McGinleyDynamic struct {
 // NewMcGinleyDynamic constructs a McGinleyDynamic. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMcGinleyDynamic(period int) (*McGinleyDynamic, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_mc_ginley_dynamic_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -21685,6 +25806,10 @@ type MedianAbsoluteDeviation struct {
 // NewMedianAbsoluteDeviation constructs a MedianAbsoluteDeviation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMedianAbsoluteDeviation(period int) (*MedianAbsoluteDeviation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_median_absolute_deviation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -21763,6 +25888,10 @@ type MedianChannel struct {
 // NewMedianChannel constructs a MedianChannel. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMedianChannel(period int, multiplier float64) (*MedianChannel, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_median_channel_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -21807,6 +25936,25 @@ func (ind *MedianChannel) Update(value float64) (MedianChannelOutput, bool) {
 	return MedianChannelOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *MedianChannel) Batch(input []float64) []MedianChannelOutput {
+	n := len(input)
+	out := make([]MedianChannelOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMedianChannelOutput, n)
+	C.wickra_median_channel_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = MedianChannelOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *MedianChannel) Reset() {
 	C.wickra_median_channel_reset(ind.handle)
@@ -21831,6 +25979,10 @@ type MedianMa struct {
 // NewMedianMa constructs a MedianMa. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMedianMa(period int) (*MedianMa, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_median_ma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22007,6 +26159,10 @@ type Mfi struct {
 // NewMfi constructs a Mfi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMfi(period int) (*Mfi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_mfi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22155,6 +26311,42 @@ func (ind *Microprice) Update(bidPrice []float64, bidSize []float64, askPrice []
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *Microprice) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_microprice_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Microprice) Reset() {
 	C.wickra_microprice_reset(ind.handle)
@@ -22179,6 +26371,10 @@ type MidPoint struct {
 // NewMidPoint constructs a MidPoint. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMidPoint(period int) (*MidPoint, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_mid_point_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22257,6 +26453,10 @@ type MidPrice struct {
 // NewMidPrice constructs a MidPrice. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMidPrice(period int) (*MidPrice, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_mid_price_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22355,6 +26555,10 @@ type MinusDi struct {
 // NewMinusDi constructs a MinusDi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMinusDi(period int) (*MinusDi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_minus_di_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22453,6 +26657,10 @@ type MinusDm struct {
 // NewMinusDm constructs a MinusDm. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMinusDm(period int) (*MinusDm, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_minus_dm_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22551,6 +26759,10 @@ type ModifiedMaStop struct {
 // NewModifiedMaStop constructs a ModifiedMaStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewModifiedMaStop(period int) (*ModifiedMaStop, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_modified_ma_stop_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22595,6 +26807,45 @@ func (ind *ModifiedMaStop) Update(open float64, high float64, low float64, close
 	return ModifiedMaStopOutput{float64(out.value), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ModifiedMaStop) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ModifiedMaStopOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ModifiedMaStopOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraModifiedMaStopOutput, n)
+	C.wickra_modified_ma_stop_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ModifiedMaStopOutput{float64(buf[i].value), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ModifiedMaStop) Reset() {
 	C.wickra_modified_ma_stop_reset(ind.handle)
@@ -22619,6 +26870,10 @@ type Mom struct {
 // NewMom constructs a Mom. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMom(period int) (*Mom, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_mom_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22893,6 +27148,10 @@ type MurreyMathLines struct {
 // NewMurreyMathLines constructs a MurreyMathLines. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewMurreyMathLines(period int) (*MurreyMathLines, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_murrey_math_lines_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -22937,6 +27196,45 @@ func (ind *MurreyMathLines) Update(open float64, high float64, low float64, clos
 	return MurreyMathLinesOutput{float64(out.mm8_8), float64(out.mm7_8), float64(out.mm6_8), float64(out.mm5_8), float64(out.mm4_8), float64(out.mm3_8), float64(out.mm2_8), float64(out.mm1_8), float64(out.mm0_8)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *MurreyMathLines) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []MurreyMathLinesOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]MurreyMathLinesOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraMurreyMathLinesOutput, n)
+	C.wickra_murrey_math_lines_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = MurreyMathLinesOutput{float64(buf[i].mm8_8), float64(buf[i].mm7_8), float64(buf[i].mm6_8), float64(buf[i].mm5_8), float64(buf[i].mm4_8), float64(buf[i].mm3_8), float64(buf[i].mm2_8), float64(buf[i].mm1_8), float64(buf[i].mm0_8)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *MurreyMathLines) Reset() {
 	C.wickra_murrey_math_lines_reset(ind.handle)
@@ -22961,6 +27259,14 @@ type NakedPoc struct {
 // NewNakedPoc constructs a NakedPoc. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewNakedPoc(sessionLen int, bins int) (*NakedPoc, error) {
+	if sessionLen < 0 {
+		return nil, fmt.Errorf("%w: sessionLen must not be negative, got %d",
+			ErrInvalidParams, sessionLen)
+	}
+	if bins < 0 {
+		return nil, fmt.Errorf("%w: bins must not be negative, got %d",
+			ErrInvalidParams, bins)
+	}
 	ptr := C.wickra_naked_poc_new(C.uintptr_t(sessionLen), C.uintptr_t(bins))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -23059,6 +27365,10 @@ type Natr struct {
 // NewNatr constructs a Natr. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewNatr(period int) (*Natr, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_natr_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -23218,6 +27528,51 @@ func (ind *NewHighsNewLows) Update(change []float64, volume []float64, newHigh [
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *NewHighsNewLows) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_new_highs_new_lows_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *NewHighsNewLows) Reset() {
 	C.wickra_new_highs_new_lows_reset(ind.handle)
@@ -23242,6 +27597,10 @@ type NewPriceLines struct {
 // NewNewPriceLines constructs a NewPriceLines. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewNewPriceLines(count int) (*NewPriceLines, error) {
+	if count < 0 {
+		return nil, fmt.Errorf("%w: count must not be negative, got %d",
+			ErrInvalidParams, count)
+	}
 	ptr := C.wickra_new_price_lines_new(C.uintptr_t(count))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -23382,6 +27741,45 @@ func (ind *Nrtr) Update(open float64, high float64, low float64, close float64, 
 		return NrtrOutput{}, false
 	}
 	return NrtrOutput{float64(out.value), float64(out.direction)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Nrtr) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []NrtrOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]NrtrOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraNrtrOutput, n)
+	C.wickra_nrtr_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = NrtrOutput{float64(buf[i].value), float64(buf[i].direction)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -23604,6 +28002,10 @@ type OIPriceDivergence struct {
 // NewOIPriceDivergence constructs a OIPriceDivergence. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOIPriceDivergence(window int) (*OIPriceDivergence, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
 	ptr := C.wickra_oi_price_divergence_new(C.uintptr_t(window))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -23642,6 +28044,64 @@ func (ind *OIPriceDivergence) Update(fundingRate float64, markPrice float64, ind
 	r := float64(C.wickra_oi_price_divergence_update(ind.handle, C.double(fundingRate), C.double(markPrice), C.double(indexPrice), C.double(futuresPrice), C.double(openInterest), C.double(longSize), C.double(shortSize), C.double(takerBuyVolume), C.double(takerSellVolume), C.double(longLiquidation), C.double(shortLiquidation), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *OIPriceDivergence) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_oi_price_divergence_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -23708,6 +28168,64 @@ func (ind *OiToVolumeRatio) Update(fundingRate float64, markPrice float64, index
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *OiToVolumeRatio) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_oi_to_volume_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OiToVolumeRatio) Reset() {
 	C.wickra_oi_to_volume_ratio_reset(ind.handle)
@@ -23772,6 +28290,64 @@ func (ind *OIWeighted) Update(fundingRate float64, markPrice float64, indexPrice
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *OIWeighted) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_oi_weighted_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OIWeighted) Reset() {
 	C.wickra_oi_weighted_reset(ind.handle)
@@ -23796,6 +28372,10 @@ type OmegaRatio struct {
 // NewOmegaRatio constructs a OmegaRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOmegaRatio(period int, threshold float64) (*OmegaRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_omega_ratio_new(C.uintptr_t(period), C.double(threshold))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24012,6 +28592,64 @@ func (ind *OpenInterestDelta) Update(fundingRate float64, markPrice float64, ind
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *OpenInterestDelta) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_open_interest_delta_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OpenInterestDelta) Reset() {
 	C.wickra_open_interest_delta_reset(ind.handle)
@@ -24036,6 +28674,10 @@ type OpenInterestMomentum struct {
 // NewOpenInterestMomentum constructs a OpenInterestMomentum. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOpenInterestMomentum(period int) (*OpenInterestMomentum, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_open_interest_momentum_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24074,6 +28716,64 @@ func (ind *OpenInterestMomentum) Update(fundingRate float64, markPrice float64, 
 	r := float64(C.wickra_open_interest_momentum_update(ind.handle, C.double(fundingRate), C.double(markPrice), C.double(indexPrice), C.double(futuresPrice), C.double(openInterest), C.double(longSize), C.double(shortSize), C.double(takerBuyVolume), C.double(takerSellVolume), C.double(longLiquidation), C.double(shortLiquidation), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *OpenInterestMomentum) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_open_interest_momentum_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -24198,6 +28898,10 @@ type OpeningRange struct {
 // NewOpeningRange constructs a OpeningRange. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOpeningRange(period int) (*OpeningRange, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_opening_range_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24240,6 +28944,45 @@ func (ind *OpeningRange) Update(open float64, high float64, low float64, close f
 		return OpeningRangeOutput{}, false
 	}
 	return OpeningRangeOutput{float64(out.high), float64(out.low), float64(out.breakout_distance)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *OpeningRange) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []OpeningRangeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]OpeningRangeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraOpeningRangeOutput, n)
+	C.wickra_opening_range_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = OpeningRangeOutput{float64(buf[i].high), float64(buf[i].low), float64(buf[i].breakout_distance)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -24316,6 +29059,42 @@ func (ind *OrderBookImbalanceFull) Update(bidPrice []float64, bidSize []float64,
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *OrderBookImbalanceFull) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_order_book_imbalance_full_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OrderBookImbalanceFull) Reset() {
 	C.wickra_order_book_imbalance_full_reset(ind.handle)
@@ -24390,6 +29169,42 @@ func (ind *OrderBookImbalanceTop1) Update(bidPrice []float64, bidSize []float64,
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *OrderBookImbalanceTop1) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_order_book_imbalance_top1_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OrderBookImbalanceTop1) Reset() {
 	C.wickra_order_book_imbalance_top1_reset(ind.handle)
@@ -24414,6 +29229,10 @@ type OrderBookImbalanceTopN struct {
 // NewOrderBookImbalanceTopN constructs a OrderBookImbalanceTopN. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOrderBookImbalanceTopN(levels int) (*OrderBookImbalanceTopN, error) {
+	if levels < 0 {
+		return nil, fmt.Errorf("%w: levels must not be negative, got %d",
+			ErrInvalidParams, levels)
+	}
 	ptr := C.wickra_order_book_imbalance_top_n_new(C.uintptr_t(levels))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24464,6 +29283,42 @@ func (ind *OrderBookImbalanceTopN) Update(bidPrice []float64, bidSize []float64,
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *OrderBookImbalanceTopN) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_order_book_imbalance_top_n_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OrderBookImbalanceTopN) Reset() {
 	C.wickra_order_book_imbalance_top_n_reset(ind.handle)
@@ -24488,6 +29343,10 @@ type OrderFlowImbalance struct {
 // NewOrderFlowImbalance constructs a OrderFlowImbalance. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOrderFlowImbalance(period int) (*OrderFlowImbalance, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_order_flow_imbalance_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24538,6 +29397,42 @@ func (ind *OrderFlowImbalance) Update(bidPrice []float64, bidSize []float64, ask
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *OrderFlowImbalance) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_order_flow_imbalance_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OrderFlowImbalance) Reset() {
 	C.wickra_order_flow_imbalance_reset(ind.handle)
@@ -24562,6 +29457,10 @@ type OuHalfLife struct {
 // NewOuHalfLife constructs a OuHalfLife. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewOuHalfLife(period int) (*OuHalfLife, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ou_half_life_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24786,6 +29685,45 @@ func (ind *OvernightIntradayReturn) Update(open float64, high float64, low float
 	return OvernightIntradayReturnOutput{float64(out.overnight), float64(out.intraday)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *OvernightIntradayReturn) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []OvernightIntradayReturnOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]OvernightIntradayReturnOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraOvernightIntradayReturnOutput, n)
+	C.wickra_overnight_intraday_return_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = OvernightIntradayReturnOutput{float64(buf[i].overnight), float64(buf[i].intraday)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *OvernightIntradayReturn) Reset() {
 	C.wickra_overnight_intraday_return_reset(ind.handle)
@@ -24810,6 +29748,10 @@ type PainIndex struct {
 // NewPainIndex constructs a PainIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPainIndex(period int) (*PainIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_pain_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24888,6 +29830,14 @@ type PairSpreadZScore struct {
 // NewPairSpreadZScore constructs a PairSpreadZScore. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPairSpreadZScore(betaPeriod int, zPeriod int) (*PairSpreadZScore, error) {
+	if betaPeriod < 0 {
+		return nil, fmt.Errorf("%w: betaPeriod must not be negative, got %d",
+			ErrInvalidParams, betaPeriod)
+	}
+	if zPeriod < 0 {
+		return nil, fmt.Errorf("%w: zPeriod must not be negative, got %d",
+			ErrInvalidParams, zPeriod)
+	}
 	ptr := C.wickra_pair_spread_z_score_new(C.uintptr_t(betaPeriod), C.uintptr_t(zPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -24970,6 +29920,10 @@ type PairwiseBeta struct {
 // NewPairwiseBeta constructs a PairwiseBeta. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPairwiseBeta(period int) (*PairwiseBeta, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_pairwise_beta_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25052,6 +30006,14 @@ type ParkinsonVolatility struct {
 // NewParkinsonVolatility constructs a ParkinsonVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewParkinsonVolatility(period int, tradingPeriods int) (*ParkinsonVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if tradingPeriods < 0 {
+		return nil, fmt.Errorf("%w: tradingPeriods must not be negative, got %d",
+			ErrInvalidParams, tradingPeriods)
+	}
 	ptr := C.wickra_parkinson_volatility_new(C.uintptr_t(period), C.uintptr_t(tradingPeriods))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25150,6 +30112,10 @@ type PearsonCorrelation struct {
 // NewPearsonCorrelation constructs a PearsonCorrelation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPearsonCorrelation(period int) (*PearsonCorrelation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_pearson_correlation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25293,6 +30259,51 @@ func (ind *PercentAboveMa) Update(change []float64, volume []float64, newHigh []
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *PercentAboveMa) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_percent_above_ma_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *PercentAboveMa) Reset() {
 	C.wickra_percent_above_ma_reset(ind.handle)
@@ -25317,6 +30328,10 @@ type PercentB struct {
 // NewPercentB constructs a PercentB. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPercentB(period int, multiplier float64) (*PercentB, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_percent_b_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25513,6 +30528,64 @@ func (ind *PerpetualPremiumIndex) Update(fundingRate float64, markPrice float64,
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *PerpetualPremiumIndex) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_perpetual_premium_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *PerpetualPremiumIndex) Reset() {
 	C.wickra_perpetual_premium_index_reset(ind.handle)
@@ -25537,6 +30610,10 @@ type Pgo struct {
 // NewPgo constructs a Pgo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPgo(period int) (*Pgo, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_pgo_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25733,6 +30810,10 @@ type Pin struct {
 // NewPin constructs a Pin. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPin(window int) (*Pin, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
 	ptr := C.wickra_pin_new(C.uintptr_t(window))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25773,6 +30854,32 @@ func (ind *Pin) Update(price float64, size float64, isBuy bool, timestamp int64)
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *Pin) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_pin_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Pin) Reset() {
 	C.wickra_pin_reset(ind.handle)
@@ -25797,6 +30904,14 @@ type PivotReversal struct {
 // NewPivotReversal constructs a PivotReversal. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPivotReversal(left int, right int) (*PivotReversal, error) {
+	if left < 0 {
+		return nil, fmt.Errorf("%w: left must not be negative, got %d",
+			ErrInvalidParams, left)
+	}
+	if right < 0 {
+		return nil, fmt.Errorf("%w: right must not be negative, got %d",
+			ErrInvalidParams, right)
+	}
 	ptr := C.wickra_pivot_reversal_new(C.uintptr_t(left), C.uintptr_t(right))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25895,6 +31010,10 @@ type PlusDi struct {
 // NewPlusDi constructs a PlusDi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPlusDi(period int) (*PlusDi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_plus_di_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -25993,6 +31112,10 @@ type PlusDm struct {
 // NewPlusDm constructs a PlusDm. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPlusDm(period int) (*PlusDm, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_plus_dm_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26091,6 +31214,14 @@ type Pmo struct {
 // NewPmo constructs a Pmo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPmo(smoothing1 int, smoothing2 int) (*Pmo, error) {
+	if smoothing1 < 0 {
+		return nil, fmt.Errorf("%w: smoothing1 must not be negative, got %d",
+			ErrInvalidParams, smoothing1)
+	}
+	if smoothing2 < 0 {
+		return nil, fmt.Errorf("%w: smoothing2 must not be negative, got %d",
+			ErrInvalidParams, smoothing2)
+	}
 	ptr := C.wickra_pmo_new(C.uintptr_t(smoothing1), C.uintptr_t(smoothing2))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26169,6 +31300,10 @@ type PointAndFigureBars struct {
 // NewPointAndFigureBars constructs a PointAndFigureBars. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPointAndFigureBars(boxSize float64, reversal int) (*PointAndFigureBars, error) {
+	if reversal < 0 {
+		return nil, fmt.Errorf("%w: reversal must not be negative, got %d",
+			ErrInvalidParams, reversal)
+	}
 	ptr := C.wickra_point_and_figure_bars_new(C.double(boxSize), C.uintptr_t(reversal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26196,7 +31331,64 @@ func (ind *PointAndFigureBars) Update(open float64, high float64, low float64, c
 		return nil
 	}
 	out := make([]PnfColumn, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = PnfColumn{int8(buf[i].direction), float64(buf[i].high), float64(buf[i].low)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraPnfColumn, n-capacity)
+		got := int(C.wickra_point_and_figure_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = PnfColumn{int8(rest[i].direction), float64(rest[i].high), float64(rest[i].low)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *PointAndFigureBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []PnfColumn {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_point_and_figure_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraPnfColumn, total)
+	got := int(C.wickra_point_and_figure_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]PnfColumn, got)
+	for i := 0; i < got; i++ {
 		out[i] = PnfColumn{int8(buf[i].direction), float64(buf[i].high), float64(buf[i].low)}
 	}
 	return out
@@ -26226,6 +31418,14 @@ type PolarizedFractalEfficiency struct {
 // NewPolarizedFractalEfficiency constructs a PolarizedFractalEfficiency. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPolarizedFractalEfficiency(period int, smoothing int) (*PolarizedFractalEfficiency, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if smoothing < 0 {
+		return nil, fmt.Errorf("%w: smoothing must not be negative, got %d",
+			ErrInvalidParams, smoothing)
+	}
 	ptr := C.wickra_polarized_fractal_efficiency_new(C.uintptr_t(period), C.uintptr_t(smoothing))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26304,6 +31504,14 @@ type Ppo struct {
 // NewPpo constructs a Ppo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPpo(fast int, slow int) (*Ppo, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_ppo_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26382,6 +31590,18 @@ type PpoHistogram struct {
 // NewPpoHistogram constructs a PpoHistogram. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewPpoHistogram(fast int, slow int, signal int) (*PpoHistogram, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_ppo_histogram_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26460,6 +31680,14 @@ type ProfileShape struct {
 // NewProfileShape constructs a ProfileShape. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewProfileShape(period int, bins int) (*ProfileShape, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if bins < 0 {
+		return nil, fmt.Errorf("%w: bins must not be negative, got %d",
+			ErrInvalidParams, bins)
+	}
 	ptr := C.wickra_profile_shape_new(C.uintptr_t(period), C.uintptr_t(bins))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26558,6 +31786,10 @@ type ProfitFactor struct {
 // NewProfitFactor constructs a ProfitFactor. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewProfitFactor(period int) (*ProfitFactor, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_profit_factor_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26636,6 +31868,10 @@ type ProjectionBands struct {
 // NewProjectionBands constructs a ProjectionBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewProjectionBands(period int) (*ProjectionBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_projection_bands_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26680,6 +31916,45 @@ func (ind *ProjectionBands) Update(open float64, high float64, low float64, clos
 	return ProjectionBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ProjectionBands) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ProjectionBandsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ProjectionBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraProjectionBandsOutput, n)
+	C.wickra_projection_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ProjectionBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ProjectionBands) Reset() {
 	C.wickra_projection_bands_reset(ind.handle)
@@ -26704,6 +31979,10 @@ type ProjectionOscillator struct {
 // NewProjectionOscillator constructs a ProjectionOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewProjectionOscillator(period int) (*ProjectionOscillator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_projection_oscillator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -26998,6 +32277,14 @@ type Qqe struct {
 // NewQqe constructs a Qqe. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewQqe(rsiPeriod int, smoothing int, factor float64) (*Qqe, error) {
+	if rsiPeriod < 0 {
+		return nil, fmt.Errorf("%w: rsiPeriod must not be negative, got %d",
+			ErrInvalidParams, rsiPeriod)
+	}
+	if smoothing < 0 {
+		return nil, fmt.Errorf("%w: smoothing must not be negative, got %d",
+			ErrInvalidParams, smoothing)
+	}
 	ptr := C.wickra_qqe_new(C.uintptr_t(rsiPeriod), C.uintptr_t(smoothing), C.double(factor))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27042,6 +32329,25 @@ func (ind *Qqe) Update(value float64) (QqeOutput, bool) {
 	return QqeOutput{float64(out.rsi_ma), float64(out.trailing_line)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Qqe) Batch(input []float64) []QqeOutput {
+	n := len(input)
+	out := make([]QqeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraQqeOutput, n)
+	C.wickra_qqe_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = QqeOutput{float64(buf[i].rsi_ma), float64(buf[i].trailing_line)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Qqe) Reset() {
 	C.wickra_qqe_reset(ind.handle)
@@ -27066,6 +32372,10 @@ type Qstick struct {
 // NewQstick constructs a Qstick. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewQstick(period int) (*Qstick, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_qstick_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27164,6 +32474,10 @@ type QuartileBands struct {
 // NewQuartileBands constructs a QuartileBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewQuartileBands(period int) (*QuartileBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_quartile_bands_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27206,6 +32520,25 @@ func (ind *QuartileBands) Update(value float64) (QuartileBandsOutput, bool) {
 		return QuartileBandsOutput{}, false
 	}
 	return QuartileBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *QuartileBands) Batch(input []float64) []QuartileBandsOutput {
+	n := len(input)
+	out := make([]QuartileBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraQuartileBandsOutput, n)
+	C.wickra_quartile_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = QuartileBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -27282,6 +32615,42 @@ func (ind *QuotedSpread) Update(bidPrice []float64, bidSize []float64, askPrice 
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *QuotedSpread) Batch(bidPrice []float64, bidSize []float64, nBids int, askPrice []float64, askSize []float64, nAsks int) []float64 {
+	if nBids <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	if nAsks <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(bidPrice) / nBids
+	if len(bidPrice) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(bidSize) != n*nBids {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askPrice) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(askSize) != n*nAsks {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_quoted_spread_batch(ind.handle, (*C.double)(unsafe.Pointer(&bidPrice[0])), (*C.double)(unsafe.Pointer(&bidSize[0])), C.uintptr_t(nBids), (*C.double)(unsafe.Pointer(&askPrice[0])), (*C.double)(unsafe.Pointer(&askSize[0])), C.uintptr_t(nAsks), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(bidPrice)
+	runtime.KeepAlive(bidSize)
+	runtime.KeepAlive(askPrice)
+	runtime.KeepAlive(askSize)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *QuotedSpread) Reset() {
 	C.wickra_quoted_spread_reset(ind.handle)
@@ -27306,6 +32675,10 @@ type RSquared struct {
 // NewRSquared constructs a RSquared. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRSquared(period int) (*RSquared, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_r_squared_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27411,7 +32784,64 @@ func (ind *RangeBars) Update(open float64, high float64, low float64, close floa
 		return nil
 	}
 	out := make([]RangeBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = RangeBar{float64(buf[i].open), float64(buf[i].close), int8(buf[i].direction)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraRangeBar, n-capacity)
+		got := int(C.wickra_range_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = RangeBar{float64(rest[i].open), float64(rest[i].close), int8(rest[i].direction)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *RangeBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []RangeBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_range_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraRangeBar, total)
+	got := int(C.wickra_range_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]RangeBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = RangeBar{float64(buf[i].open), float64(buf[i].close), int8(buf[i].direction)}
 	}
 	return out
@@ -27441,6 +32871,10 @@ type RealizedSpread struct {
 // NewRealizedSpread constructs a RealizedSpread. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRealizedSpread(horizon int) (*RealizedSpread, error) {
+	if horizon < 0 {
+		return nil, fmt.Errorf("%w: horizon must not be negative, got %d",
+			ErrInvalidParams, horizon)
+	}
 	ptr := C.wickra_realized_spread_new(C.uintptr_t(horizon))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27481,6 +32915,36 @@ func (ind *RealizedSpread) Update(price float64, size float64, isBuy bool, times
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *RealizedSpread) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64, mid []float64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(mid) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_realized_spread_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&mid[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	runtime.KeepAlive(mid)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *RealizedSpread) Reset() {
 	C.wickra_realized_spread_reset(ind.handle)
@@ -27505,6 +32969,10 @@ type RealizedVolatility struct {
 // NewRealizedVolatility constructs a RealizedVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRealizedVolatility(period int) (*RealizedVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_realized_volatility_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27759,6 +33227,10 @@ type Reflex struct {
 // NewReflex constructs a Reflex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewReflex(period int) (*Reflex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_reflex_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27837,6 +33309,14 @@ type RegimeLabel struct {
 // NewRegimeLabel constructs a RegimeLabel. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRegimeLabel(volPeriod int, lookback int) (*RegimeLabel, error) {
+	if volPeriod < 0 {
+		return nil, fmt.Errorf("%w: volPeriod must not be negative, got %d",
+			ErrInvalidParams, volPeriod)
+	}
+	if lookback < 0 {
+		return nil, fmt.Errorf("%w: lookback must not be negative, got %d",
+			ErrInvalidParams, lookback)
+	}
 	ptr := C.wickra_regime_label_new(C.uintptr_t(volPeriod), C.uintptr_t(lookback))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27915,6 +33395,14 @@ type RelativeStrengthAB struct {
 // NewRelativeStrengthAB constructs a RelativeStrengthAB. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRelativeStrengthAB(maPeriod int, rsiPeriod int) (*RelativeStrengthAB, error) {
+	if maPeriod < 0 {
+		return nil, fmt.Errorf("%w: maPeriod must not be negative, got %d",
+			ErrInvalidParams, maPeriod)
+	}
+	if rsiPeriod < 0 {
+		return nil, fmt.Errorf("%w: rsiPeriod must not be negative, got %d",
+			ErrInvalidParams, rsiPeriod)
+	}
 	ptr := C.wickra_relative_strength_ab_new(C.uintptr_t(maPeriod), C.uintptr_t(rsiPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -27957,6 +33445,29 @@ func (ind *RelativeStrengthAB) Update(x float64, y float64) (RelativeStrengthOut
 		return RelativeStrengthOutput{}, false
 	}
 	return RelativeStrengthOutput{float64(out.ratio), float64(out.ratio_ma), float64(out.ratio_rsi)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *RelativeStrengthAB) Batch(x []float64, y []float64) []RelativeStrengthOutput {
+	n := len(x)
+	if len(y) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]RelativeStrengthOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraRelativeStrengthOutput, n)
+	C.wickra_relative_strength_ab_batch(ind.handle, (*C.double)(unsafe.Pointer(&x[0])), (*C.double)(unsafe.Pointer(&y[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(x)
+	runtime.KeepAlive(y)
+	for i := range buf {
+		out[i] = RelativeStrengthOutput{float64(buf[i].ratio), float64(buf[i].ratio_ma), float64(buf[i].ratio_rsi)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -28010,7 +33521,64 @@ func (ind *RenkoBars) Update(open float64, high float64, low float64, close floa
 		return nil
 	}
 	out := make([]RenkoBrick, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = RenkoBrick{float64(buf[i].open), float64(buf[i].close), int8(buf[i].direction)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraRenkoBrick, n-capacity)
+		got := int(C.wickra_renko_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = RenkoBrick{float64(rest[i].open), float64(rest[i].close), int8(rest[i].direction)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *RenkoBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []RenkoBrick {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_renko_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraRenkoBrick, total)
+	got := int(C.wickra_renko_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]RenkoBrick, got)
+	for i := 0; i < got; i++ {
 		out[i] = RenkoBrick{float64(buf[i].open), float64(buf[i].close), int8(buf[i].direction)}
 	}
 	return out
@@ -28117,8 +33685,8 @@ type Resampler struct {
 
 // NewResampler constructs a Resampler. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
-func NewResampler(timeframe int64) (*Resampler, error) {
-	ptr := C.wickra_resampler_new(C.int64_t(timeframe))
+func NewResampler(timeframe int64, gapFill bool) (*Resampler, error) {
+	ptr := C.wickra_resampler_new(C.int64_t(timeframe), C.bool(gapFill))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
@@ -28127,16 +33695,22 @@ func NewResampler(timeframe int64) (*Resampler, error) {
 	return obj, nil
 }
 
-// Update feeds one observation. The bool reports whether a value is
-// available yet (false during warmup).
-func (ind *Resampler) Update(open float64, high float64, low float64, close float64, volume float64, timestamp int64) (Candle, bool) {
-	var out C.struct_WickraCandle
-	ok := bool(C.wickra_resampler_update(ind.handle, C.double(open), C.double(high), C.double(low), C.double(close), C.double(volume), C.int64_t(timestamp), &out))
+// Push feeds one candle and returns the candles it closed (none while
+// the open bar grows, one per closed bucket, plus gap-fill placeholders).
+func (ind *Resampler) Push(open float64, high float64, low float64, close float64, volume float64, timestamp int64) []Candle {
+	n := int(C.wickra_resampler_push(ind.handle, C.double(open), C.double(high), C.double(low), C.double(close), C.double(volume), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
-	if !ok {
-		return Candle{}, false
+	if n <= 0 {
+		return nil
 	}
-	return Candle{float64(out.open), float64(out.high), float64(out.low), float64(out.close), float64(out.volume), int64(out.timestamp)}, true
+	buf := make([]C.struct_WickraCandle, n)
+	C.wickra_resampler_drain(ind.handle, &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	out := make([]Candle, n)
+	for i := 0; i < n; i++ {
+		out[i] = Candle{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume), int64(buf[i].timestamp)}
+	}
+	return out
 }
 
 // Flush emits the final, still-open candle (ok is false if none is pending).
@@ -28364,6 +33938,14 @@ type Rmi struct {
 // NewRmi constructs a Rmi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRmi(period int, momentum int) (*Rmi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if momentum < 0 {
+		return nil, fmt.Errorf("%w: momentum must not be negative, got %d",
+			ErrInvalidParams, momentum)
+	}
 	ptr := C.wickra_rmi_new(C.uintptr_t(period), C.uintptr_t(momentum))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28442,6 +34024,10 @@ type Roc struct {
 // NewRoc constructs a Roc. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRoc(period int) (*Roc, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_roc_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28520,6 +34106,10 @@ type Rocp struct {
 // NewRocp constructs a Rocp. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRocp(period int) (*Rocp, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rocp_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28598,6 +34188,10 @@ type Rocr struct {
 // NewRocr constructs a Rocr. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRocr(period int) (*Rocr, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rocr_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28676,6 +34270,10 @@ type Rocr100 struct {
 // NewRocr100 constructs a Rocr100. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRocr100(period int) (*Rocr100, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rocr100_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28754,6 +34352,14 @@ type RogersSatchellVolatility struct {
 // NewRogersSatchellVolatility constructs a RogersSatchellVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRogersSatchellVolatility(period int, tradingPeriods int) (*RogersSatchellVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if tradingPeriods < 0 {
+		return nil, fmt.Errorf("%w: tradingPeriods must not be negative, got %d",
+			ErrInvalidParams, tradingPeriods)
+	}
 	ptr := C.wickra_rogers_satchell_volatility_new(C.uintptr_t(period), C.uintptr_t(tradingPeriods))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28852,6 +34458,10 @@ type RollMeasure struct {
 // NewRollMeasure constructs a RollMeasure. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollMeasure(period int) (*RollMeasure, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_roll_measure_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28892,6 +34502,32 @@ func (ind *RollMeasure) Update(price float64, size float64, isBuy bool, timestam
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *RollMeasure) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_roll_measure_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *RollMeasure) Reset() {
 	C.wickra_roll_measure_reset(ind.handle)
@@ -28916,6 +34552,10 @@ type RollingCorrelation struct {
 // NewRollingCorrelation constructs a RollingCorrelation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingCorrelation(period int) (*RollingCorrelation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_correlation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -28998,6 +34638,10 @@ type RollingCovariance struct {
 // NewRollingCovariance constructs a RollingCovariance. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingCovariance(period int) (*RollingCovariance, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_covariance_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29080,6 +34724,10 @@ type RollingIqr struct {
 // NewRollingIqr constructs a RollingIqr. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingIqr(period int) (*RollingIqr, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_iqr_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29158,6 +34806,10 @@ type RollingMinMaxScaler struct {
 // NewRollingMinMaxScaler constructs a RollingMinMaxScaler. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingMinMaxScaler(period int) (*RollingMinMaxScaler, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_min_max_scaler_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29236,6 +34888,10 @@ type RollingPercentileRank struct {
 // NewRollingPercentileRank constructs a RollingPercentileRank. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingPercentileRank(period int) (*RollingPercentileRank, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_percentile_rank_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29314,6 +34970,10 @@ type RollingQuantile struct {
 // NewRollingQuantile constructs a RollingQuantile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingQuantile(period int, quantile float64) (*RollingQuantile, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_quantile_new(C.uintptr_t(period), C.double(quantile))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29392,6 +35052,10 @@ type RollingVwap struct {
 // NewRollingVwap constructs a RollingVwap. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRollingVwap(period int) (*RollingVwap, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rolling_vwap_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29490,6 +35154,14 @@ type RoofingFilter struct {
 // NewRoofingFilter constructs a RoofingFilter. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRoofingFilter(lpPeriod int, hpPeriod int) (*RoofingFilter, error) {
+	if lpPeriod < 0 {
+		return nil, fmt.Errorf("%w: lpPeriod must not be negative, got %d",
+			ErrInvalidParams, lpPeriod)
+	}
+	if hpPeriod < 0 {
+		return nil, fmt.Errorf("%w: hpPeriod must not be negative, got %d",
+			ErrInvalidParams, hpPeriod)
+	}
 	ptr := C.wickra_roofing_filter_new(C.uintptr_t(lpPeriod), C.uintptr_t(hpPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29568,6 +35240,10 @@ type Rsi struct {
 // NewRsi constructs a Rsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRsi(period int) (*Rsi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rsi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29646,6 +35322,10 @@ type Rsx struct {
 // NewRsx constructs a Rsx. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRsx(length int) (*Rsx, error) {
+	if length < 0 {
+		return nil, fmt.Errorf("%w: length must not be negative, got %d",
+			ErrInvalidParams, length)
+	}
 	ptr := C.wickra_rsx_new(C.uintptr_t(length))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29724,6 +35404,10 @@ type RunBars struct {
 // NewRunBars constructs a RunBars. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRunBars(runLength int) (*RunBars, error) {
+	if runLength < 0 {
+		return nil, fmt.Errorf("%w: runLength must not be negative, got %d",
+			ErrInvalidParams, runLength)
+	}
 	ptr := C.wickra_run_bars_new(C.uintptr_t(runLength))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29751,7 +35435,64 @@ func (ind *RunBars) Update(open float64, high float64, low float64, close float6
 		return nil
 	}
 	out := make([]RunBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = RunBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), int(buf[i].length), int8(buf[i].direction)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraRunBar, n-capacity)
+		got := int(C.wickra_run_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = RunBar{float64(rest[i].open), float64(rest[i].high), float64(rest[i].low), float64(rest[i].close), int(rest[i].length), int8(rest[i].direction)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *RunBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []RunBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_run_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraRunBar, total)
+	got := int(C.wickra_run_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]RunBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = RunBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), int(buf[i].length), int8(buf[i].direction)}
 	}
 	return out
@@ -29781,6 +35522,10 @@ type Rvi struct {
 // NewRvi constructs a Rvi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRvi(period int) (*Rvi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rvi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29879,6 +35624,10 @@ type RviVolatility struct {
 // NewRviVolatility constructs a RviVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRviVolatility(period int) (*RviVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rvi_volatility_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -29957,6 +35706,10 @@ type Rwi struct {
 // NewRwi constructs a Rwi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewRwi(period int) (*Rwi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_rwi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -30001,6 +35754,45 @@ func (ind *Rwi) Update(open float64, high float64, low float64, close float64, v
 	return RwiOutput{float64(out.high), float64(out.low)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Rwi) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []RwiOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]RwiOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraRwiOutput, n)
+	C.wickra_rwi_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = RwiOutput{float64(buf[i].high), float64(buf[i].low)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Rwi) Reset() {
 	C.wickra_rwi_reset(ind.handle)
@@ -30025,6 +35817,14 @@ type SampleEntropy struct {
 // NewSampleEntropy constructs a SampleEntropy. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSampleEntropy(period int, m int, rFactor float64) (*SampleEntropy, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if m < 0 {
+		return nil, fmt.Errorf("%w: m must not be negative, got %d",
+			ErrInvalidParams, m)
+	}
 	ptr := C.wickra_sample_entropy_new(C.uintptr_t(period), C.uintptr_t(m), C.double(rFactor))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -30441,6 +36241,45 @@ func (ind *SessionHighLow) Update(open float64, high float64, low float64, close
 	return SessionHighLowOutput{float64(out.high), float64(out.low)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *SessionHighLow) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []SessionHighLowOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]SessionHighLowOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraSessionHighLowOutput, n)
+	C.wickra_session_high_low_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = SessionHighLowOutput{float64(buf[i].high), float64(buf[i].low)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *SessionHighLow) Reset() {
 	C.wickra_session_high_low_reset(ind.handle)
@@ -30507,6 +36346,45 @@ func (ind *SessionRange) Update(open float64, high float64, low float64, close f
 		return SessionRangeOutput{}, false
 	}
 	return SessionRangeOutput{float64(out.asia), float64(out.eu), float64(out.us)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *SessionRange) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []SessionRangeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]SessionRangeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraSessionRangeOutput, n)
+	C.wickra_session_range_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = SessionRangeOutput{float64(buf[i].asia), float64(buf[i].eu), float64(buf[i].us)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -30631,6 +36509,14 @@ type ShannonEntropy struct {
 // NewShannonEntropy constructs a ShannonEntropy. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewShannonEntropy(period int, bins int) (*ShannonEntropy, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if bins < 0 {
+		return nil, fmt.Errorf("%w: bins must not be negative, got %d",
+			ErrInvalidParams, bins)
+	}
 	ptr := C.wickra_shannon_entropy_new(C.uintptr_t(period), C.uintptr_t(bins))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -30807,6 +36693,10 @@ type SharpeRatio struct {
 // NewSharpeRatio constructs a SharpeRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSharpeRatio(period int, riskFree float64) (*SharpeRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_sharpe_ratio_new(C.uintptr_t(period), C.double(riskFree))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31121,6 +37011,32 @@ func (ind *SignedVolume) Update(price float64, size float64, isBuy bool, timesta
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *SignedVolume) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_signed_volume_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *SignedVolume) Reset() {
 	C.wickra_signed_volume_reset(ind.handle)
@@ -31223,6 +37139,10 @@ type SineWeightedMa struct {
 // NewSineWeightedMa constructs a SineWeightedMa. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSineWeightedMa(period int) (*SineWeightedMa, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_sine_weighted_ma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31301,6 +37221,14 @@ type SinglePrints struct {
 // NewSinglePrints constructs a SinglePrints. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSinglePrints(period int, bins int) (*SinglePrints, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if bins < 0 {
+		return nil, fmt.Errorf("%w: bins must not be negative, got %d",
+			ErrInvalidParams, bins)
+	}
 	ptr := C.wickra_single_prints_new(C.uintptr_t(period), C.uintptr_t(bins))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31399,6 +37327,10 @@ type Skewness struct {
 // NewSkewness constructs a Skewness. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSkewness(period int) (*Skewness, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_skewness_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31477,6 +37409,10 @@ type Sma struct {
 // NewSma constructs a Sma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSma(period int) (*Sma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_sma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31555,6 +37491,18 @@ type Smi struct {
 // NewSmi constructs a Smi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSmi(period int, dPeriod int, d2Period int) (*Smi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if dPeriod < 0 {
+		return nil, fmt.Errorf("%w: dPeriod must not be negative, got %d",
+			ErrInvalidParams, dPeriod)
+	}
+	if d2Period < 0 {
+		return nil, fmt.Errorf("%w: d2Period must not be negative, got %d",
+			ErrInvalidParams, d2Period)
+	}
 	ptr := C.wickra_smi_new(C.uintptr_t(period), C.uintptr_t(dPeriod), C.uintptr_t(d2Period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31653,6 +37601,10 @@ type Smma struct {
 // NewSmma constructs a Smma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSmma(period int) (*Smma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_smma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31731,6 +37683,10 @@ type SmoothedHeikinAshi struct {
 // NewSmoothedHeikinAshi constructs a SmoothedHeikinAshi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSmoothedHeikinAshi(period int) (*SmoothedHeikinAshi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_smoothed_heikin_ashi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31775,6 +37731,45 @@ func (ind *SmoothedHeikinAshi) Update(open float64, high float64, low float64, c
 	return SmoothedHeikinAshiOutput{float64(out.open), float64(out.high), float64(out.low), float64(out.close)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *SmoothedHeikinAshi) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []SmoothedHeikinAshiOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]SmoothedHeikinAshiOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraSmoothedHeikinAshiOutput, n)
+	C.wickra_smoothed_heikin_ashi_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = SmoothedHeikinAshiOutput{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *SmoothedHeikinAshi) Reset() {
 	C.wickra_smoothed_heikin_ashi_reset(ind.handle)
@@ -31799,6 +37794,10 @@ type SortinoRatio struct {
 // NewSortinoRatio constructs a SortinoRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSortinoRatio(period int, mar float64) (*SortinoRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_sortino_ratio_new(C.uintptr_t(period), C.double(mar))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -31877,6 +37876,10 @@ type SpearmanCorrelation struct {
 // NewSpearmanCorrelation constructs a SpearmanCorrelation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSpearmanCorrelation(period int) (*SpearmanCorrelation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_spearman_correlation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32057,6 +38060,10 @@ type SpreadAr1Coefficient struct {
 // NewSpreadAr1Coefficient constructs a SpreadAr1Coefficient. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSpreadAr1Coefficient(period int) (*SpreadAr1Coefficient, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_spread_ar1_coefficient_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32139,6 +38146,10 @@ type SpreadBollingerBands struct {
 // NewSpreadBollingerBands constructs a SpreadBollingerBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSpreadBollingerBands(period int, numStd float64) (*SpreadBollingerBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_spread_bollinger_bands_new(C.uintptr_t(period), C.double(numStd))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32183,6 +38194,29 @@ func (ind *SpreadBollingerBands) Update(x float64, y float64) (SpreadBollingerBa
 	return SpreadBollingerBandsOutput{float64(out.middle), float64(out.upper), float64(out.lower), float64(out.percent_b)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *SpreadBollingerBands) Batch(x []float64, y []float64) []SpreadBollingerBandsOutput {
+	n := len(x)
+	if len(y) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]SpreadBollingerBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraSpreadBollingerBandsOutput, n)
+	C.wickra_spread_bollinger_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&x[0])), (*C.double)(unsafe.Pointer(&y[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(x)
+	runtime.KeepAlive(y)
+	for i := range buf {
+		out[i] = SpreadBollingerBandsOutput{float64(buf[i].middle), float64(buf[i].upper), float64(buf[i].lower), float64(buf[i].percent_b)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *SpreadBollingerBands) Reset() {
 	C.wickra_spread_bollinger_bands_reset(ind.handle)
@@ -32207,6 +38241,10 @@ type SpreadHurst struct {
 // NewSpreadHurst constructs a SpreadHurst. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSpreadHurst(period int) (*SpreadHurst, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_spread_hurst_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32387,6 +38425,10 @@ type StandardError struct {
 // NewStandardError constructs a StandardError. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStandardError(period int) (*StandardError, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_standard_error_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32465,6 +38507,10 @@ type StandardErrorBands struct {
 // NewStandardErrorBands constructs a StandardErrorBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStandardErrorBands(period int, multiplier float64) (*StandardErrorBands, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_standard_error_bands_new(C.uintptr_t(period), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32509,6 +38555,25 @@ func (ind *StandardErrorBands) Update(value float64) (StandardErrorBandsOutput, 
 	return StandardErrorBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *StandardErrorBands) Batch(input []float64) []StandardErrorBandsOutput {
+	n := len(input)
+	out := make([]StandardErrorBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraStandardErrorBandsOutput, n)
+	C.wickra_standard_error_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = StandardErrorBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *StandardErrorBands) Reset() {
 	C.wickra_standard_error_bands_reset(ind.handle)
@@ -32533,6 +38598,14 @@ type StarcBands struct {
 // NewStarcBands constructs a StarcBands. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStarcBands(smaPeriod int, atrPeriod int, multiplier float64) (*StarcBands, error) {
+	if smaPeriod < 0 {
+		return nil, fmt.Errorf("%w: smaPeriod must not be negative, got %d",
+			ErrInvalidParams, smaPeriod)
+	}
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_starc_bands_new(C.uintptr_t(smaPeriod), C.uintptr_t(atrPeriod), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32577,6 +38650,45 @@ func (ind *StarcBands) Update(open float64, high float64, low float64, close flo
 	return StarcBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *StarcBands) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []StarcBandsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]StarcBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraStarcBandsOutput, n)
+	C.wickra_starc_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = StarcBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *StarcBands) Reset() {
 	C.wickra_starc_bands_reset(ind.handle)
@@ -32601,6 +38713,18 @@ type Stc struct {
 // NewStc constructs a Stc. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStc(fast int, slow int, schaffPeriod int, factor float64) (*Stc, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if schaffPeriod < 0 {
+		return nil, fmt.Errorf("%w: schaffPeriod must not be negative, got %d",
+			ErrInvalidParams, schaffPeriod)
+	}
 	ptr := C.wickra_stc_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(schaffPeriod), C.double(factor))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32679,6 +38803,10 @@ type StdDev struct {
 // NewStdDev constructs a StdDev. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStdDev(period int) (*StdDev, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_std_dev_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -32835,6 +38963,10 @@ type SterlingRatio struct {
 // NewSterlingRatio constructs a SterlingRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSterlingRatio(period int) (*SterlingRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_sterling_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33011,6 +39143,14 @@ type StochRsi struct {
 // NewStochRsi constructs a StochRsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStochRsi(rsiPeriod int, stochPeriod int) (*StochRsi, error) {
+	if rsiPeriod < 0 {
+		return nil, fmt.Errorf("%w: rsiPeriod must not be negative, got %d",
+			ErrInvalidParams, rsiPeriod)
+	}
+	if stochPeriod < 0 {
+		return nil, fmt.Errorf("%w: stochPeriod must not be negative, got %d",
+			ErrInvalidParams, stochPeriod)
+	}
 	ptr := C.wickra_stoch_rsi_new(C.uintptr_t(rsiPeriod), C.uintptr_t(stochPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33089,6 +39229,14 @@ type Stochastic struct {
 // NewStochastic constructs a Stochastic. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStochastic(kPeriod int, dPeriod int) (*Stochastic, error) {
+	if kPeriod < 0 {
+		return nil, fmt.Errorf("%w: kPeriod must not be negative, got %d",
+			ErrInvalidParams, kPeriod)
+	}
+	if dPeriod < 0 {
+		return nil, fmt.Errorf("%w: dPeriod must not be negative, got %d",
+			ErrInvalidParams, dPeriod)
+	}
 	ptr := C.wickra_stochastic_new(C.uintptr_t(kPeriod), C.uintptr_t(dPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33133,6 +39281,45 @@ func (ind *Stochastic) Update(open float64, high float64, low float64, close flo
 	return StochasticOutput{float64(out.k), float64(out.d)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Stochastic) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []StochasticOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]StochasticOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraStochasticOutput, n)
+	C.wickra_stochastic_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = StochasticOutput{float64(buf[i].k), float64(buf[i].d)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Stochastic) Reset() {
 	C.wickra_stochastic_reset(ind.handle)
@@ -33157,6 +39344,10 @@ type StochasticCci struct {
 // NewStochasticCci constructs a StochasticCci. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewStochasticCci(period int) (*StochasticCci, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_stochastic_cci_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33255,6 +39446,10 @@ type SuperSmoother struct {
 // NewSuperSmoother constructs a SuperSmoother. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSuperSmoother(period int) (*SuperSmoother, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_super_smoother_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33333,6 +39528,10 @@ type SuperTrend struct {
 // NewSuperTrend constructs a SuperTrend. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewSuperTrend(atrPeriod int, multiplier float64) (*SuperTrend, error) {
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_super_trend_new(C.uintptr_t(atrPeriod), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33377,6 +39576,45 @@ func (ind *SuperTrend) Update(open float64, high float64, low float64, close flo
 	return SuperTrendOutput{float64(out.value), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *SuperTrend) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []SuperTrendOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]SuperTrendOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraSuperTrendOutput, n)
+	C.wickra_super_trend_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = SuperTrendOutput{float64(buf[i].value), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *SuperTrend) Reset() {
 	C.wickra_super_trend_reset(ind.handle)
@@ -33401,6 +39639,10 @@ type T3 struct {
 // NewT3 constructs a T3. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewT3(period int, v float64) (*T3, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_t3_new(C.uintptr_t(period), C.double(v))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33479,6 +39721,10 @@ type TailRatio struct {
 // NewTailRatio constructs a TailRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTailRatio(period int) (*TailRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_tail_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -33595,6 +39841,64 @@ func (ind *TakerBuySellRatio) Update(fundingRate float64, markPrice float64, ind
 	r := float64(C.wickra_taker_buy_sell_ratio_update(ind.handle, C.double(fundingRate), C.double(markPrice), C.double(indexPrice), C.double(futuresPrice), C.double(openInterest), C.double(longSize), C.double(shortSize), C.double(takerBuyVolume), C.double(takerSellVolume), C.double(longLiquidation), C.double(shortLiquidation), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *TakerBuySellRatio) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_taker_buy_sell_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -34111,6 +40415,22 @@ type TdCombo struct {
 // NewTdCombo constructs a TdCombo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdCombo(setupLookback int, setupTarget int, countdownLookback int, countdownTarget int) (*TdCombo, error) {
+	if setupLookback < 0 {
+		return nil, fmt.Errorf("%w: setupLookback must not be negative, got %d",
+			ErrInvalidParams, setupLookback)
+	}
+	if setupTarget < 0 {
+		return nil, fmt.Errorf("%w: setupTarget must not be negative, got %d",
+			ErrInvalidParams, setupTarget)
+	}
+	if countdownLookback < 0 {
+		return nil, fmt.Errorf("%w: countdownLookback must not be negative, got %d",
+			ErrInvalidParams, countdownLookback)
+	}
+	if countdownTarget < 0 {
+		return nil, fmt.Errorf("%w: countdownTarget must not be negative, got %d",
+			ErrInvalidParams, countdownTarget)
+	}
 	ptr := C.wickra_td_combo_new(C.uintptr_t(setupLookback), C.uintptr_t(setupTarget), C.uintptr_t(countdownLookback), C.uintptr_t(countdownTarget))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -34209,6 +40529,22 @@ type TdCountdown struct {
 // NewTdCountdown constructs a TdCountdown. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdCountdown(setupLookback int, setupTarget int, countdownLookback int, countdownTarget int) (*TdCountdown, error) {
+	if setupLookback < 0 {
+		return nil, fmt.Errorf("%w: setupLookback must not be negative, got %d",
+			ErrInvalidParams, setupLookback)
+	}
+	if setupTarget < 0 {
+		return nil, fmt.Errorf("%w: setupTarget must not be negative, got %d",
+			ErrInvalidParams, setupTarget)
+	}
+	if countdownLookback < 0 {
+		return nil, fmt.Errorf("%w: countdownLookback must not be negative, got %d",
+			ErrInvalidParams, countdownLookback)
+	}
+	if countdownTarget < 0 {
+		return nil, fmt.Errorf("%w: countdownTarget must not be negative, got %d",
+			ErrInvalidParams, countdownTarget)
+	}
 	ptr := C.wickra_td_countdown_new(C.uintptr_t(setupLookback), C.uintptr_t(setupTarget), C.uintptr_t(countdownLookback), C.uintptr_t(countdownTarget))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -34307,6 +40643,10 @@ type TdDWave struct {
 // NewTdDWave constructs a TdDWave. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdDWave(strength int) (*TdDWave, error) {
+	if strength < 0 {
+		return nil, fmt.Errorf("%w: strength must not be negative, got %d",
+			ErrInvalidParams, strength)
+	}
 	ptr := C.wickra_td_d_wave_new(C.uintptr_t(strength))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -34405,6 +40745,10 @@ type TdDeMarker struct {
 // NewTdDeMarker constructs a TdDeMarker. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdDeMarker(period int) (*TdDeMarker, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_td_de_marker_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -34601,6 +40945,14 @@ type TdLines struct {
 // NewTdLines constructs a TdLines. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdLines(lookback int, target int) (*TdLines, error) {
+	if lookback < 0 {
+		return nil, fmt.Errorf("%w: lookback must not be negative, got %d",
+			ErrInvalidParams, lookback)
+	}
+	if target < 0 {
+		return nil, fmt.Errorf("%w: target must not be negative, got %d",
+			ErrInvalidParams, target)
+	}
 	ptr := C.wickra_td_lines_new(C.uintptr_t(lookback), C.uintptr_t(target))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -34645,6 +40997,45 @@ func (ind *TdLines) Update(open float64, high float64, low float64, close float6
 	return TdLinesOutput{float64(out.resistance), float64(out.support)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *TdLines) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TdLinesOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]TdLinesOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraTdLinesOutput, n)
+	C.wickra_td_lines_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = TdLinesOutput{float64(buf[i].resistance), float64(buf[i].support)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TdLines) Reset() {
 	C.wickra_td_lines_reset(ind.handle)
@@ -34669,6 +41060,14 @@ type TdMovingAverage struct {
 // NewTdMovingAverage constructs a TdMovingAverage. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdMovingAverage(periodSt1 int, periodSt2 int) (*TdMovingAverage, error) {
+	if periodSt1 < 0 {
+		return nil, fmt.Errorf("%w: periodSt1 must not be negative, got %d",
+			ErrInvalidParams, periodSt1)
+	}
+	if periodSt2 < 0 {
+		return nil, fmt.Errorf("%w: periodSt2 must not be negative, got %d",
+			ErrInvalidParams, periodSt2)
+	}
 	ptr := C.wickra_td_moving_average_new(C.uintptr_t(periodSt1), C.uintptr_t(periodSt2))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -34711,6 +41110,45 @@ func (ind *TdMovingAverage) Update(open float64, high float64, low float64, clos
 		return TdMovingAverageOutput{}, false
 	}
 	return TdMovingAverageOutput{float64(out.st1), float64(out.st2)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *TdMovingAverage) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TdMovingAverageOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]TdMovingAverageOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraTdMovingAverageOutput, n)
+	C.wickra_td_moving_average_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = TdMovingAverageOutput{float64(buf[i].st1), float64(buf[i].st2)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -34835,6 +41273,10 @@ type TdPressure struct {
 // NewTdPressure constructs a TdPressure. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdPressure(period int) (*TdPressure, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_td_pressure_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35075,6 +41517,45 @@ func (ind *TdRangeProjection) Update(open float64, high float64, low float64, cl
 	return TdRangeProjectionOutput{float64(out.high), float64(out.low)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *TdRangeProjection) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TdRangeProjectionOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]TdRangeProjectionOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraTdRangeProjectionOutput, n)
+	C.wickra_td_range_projection_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = TdRangeProjectionOutput{float64(buf[i].high), float64(buf[i].low)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TdRangeProjection) Reset() {
 	C.wickra_td_range_projection_reset(ind.handle)
@@ -35099,6 +41580,10 @@ type TdRei struct {
 // NewTdRei constructs a TdRei. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdRei(period int) (*TdRei, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_td_rei_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35197,6 +41682,14 @@ type TdRiskLevel struct {
 // NewTdRiskLevel constructs a TdRiskLevel. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdRiskLevel(lookback int, target int) (*TdRiskLevel, error) {
+	if lookback < 0 {
+		return nil, fmt.Errorf("%w: lookback must not be negative, got %d",
+			ErrInvalidParams, lookback)
+	}
+	if target < 0 {
+		return nil, fmt.Errorf("%w: target must not be negative, got %d",
+			ErrInvalidParams, target)
+	}
 	ptr := C.wickra_td_risk_level_new(C.uintptr_t(lookback), C.uintptr_t(target))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35241,6 +41734,45 @@ func (ind *TdRiskLevel) Update(open float64, high float64, low float64, close fl
 	return TdRiskLevelOutput{float64(out.buy_risk), float64(out.sell_risk)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *TdRiskLevel) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TdRiskLevelOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]TdRiskLevelOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraTdRiskLevelOutput, n)
+	C.wickra_td_risk_level_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = TdRiskLevelOutput{float64(buf[i].buy_risk), float64(buf[i].sell_risk)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TdRiskLevel) Reset() {
 	C.wickra_td_risk_level_reset(ind.handle)
@@ -35265,6 +41797,22 @@ type TdSequential struct {
 // NewTdSequential constructs a TdSequential. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdSequential(setupLookback int, setupTarget int, countdownLookback int, countdownTarget int) (*TdSequential, error) {
+	if setupLookback < 0 {
+		return nil, fmt.Errorf("%w: setupLookback must not be negative, got %d",
+			ErrInvalidParams, setupLookback)
+	}
+	if setupTarget < 0 {
+		return nil, fmt.Errorf("%w: setupTarget must not be negative, got %d",
+			ErrInvalidParams, setupTarget)
+	}
+	if countdownLookback < 0 {
+		return nil, fmt.Errorf("%w: countdownLookback must not be negative, got %d",
+			ErrInvalidParams, countdownLookback)
+	}
+	if countdownTarget < 0 {
+		return nil, fmt.Errorf("%w: countdownTarget must not be negative, got %d",
+			ErrInvalidParams, countdownTarget)
+	}
 	ptr := C.wickra_td_sequential_new(C.uintptr_t(setupLookback), C.uintptr_t(setupTarget), C.uintptr_t(countdownLookback), C.uintptr_t(countdownTarget))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35309,6 +41857,45 @@ func (ind *TdSequential) Update(open float64, high float64, low float64, close f
 	return TdSequentialOutput{float64(out.setup), float64(out.countdown), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *TdSequential) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TdSequentialOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]TdSequentialOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraTdSequentialOutput, n)
+	C.wickra_td_sequential_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = TdSequentialOutput{float64(buf[i].setup), float64(buf[i].countdown), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TdSequential) Reset() {
 	C.wickra_td_sequential_reset(ind.handle)
@@ -35333,6 +41920,14 @@ type TdSetup struct {
 // NewTdSetup constructs a TdSetup. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTdSetup(lookback int, target int) (*TdSetup, error) {
+	if lookback < 0 {
+		return nil, fmt.Errorf("%w: lookback must not be negative, got %d",
+			ErrInvalidParams, lookback)
+	}
+	if target < 0 {
+		return nil, fmt.Errorf("%w: target must not be negative, got %d",
+			ErrInvalidParams, target)
+	}
 	ptr := C.wickra_td_setup_new(C.uintptr_t(lookback), C.uintptr_t(target))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35529,6 +42124,10 @@ type Tema struct {
 // NewTema constructs a Tema. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTema(period int) (*Tema, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_tema_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35645,6 +42244,64 @@ func (ind *TermStructureBasis) Update(fundingRate float64, markPrice float64, in
 	r := float64(C.wickra_term_structure_basis_update(ind.handle, C.double(fundingRate), C.double(markPrice), C.double(indexPrice), C.double(futuresPrice), C.double(openInterest), C.double(longSize), C.double(shortSize), C.double(takerBuyVolume), C.double(takerSellVolume), C.double(longLiquidation), C.double(shortLiquidation), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *TermStructureBasis) Batch(fundingRate []float64, markPrice []float64, indexPrice []float64, futuresPrice []float64, openInterest []float64, longSize []float64, shortSize []float64, takerBuyVolume []float64, takerSellVolume []float64, longLiquidation []float64, shortLiquidation []float64, timestamp []int64) []float64 {
+	n := len(fundingRate)
+	if len(markPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(indexPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(futuresPrice) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(openInterest) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortSize) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerBuyVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(takerSellVolume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(longLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(shortLiquidation) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_term_structure_basis_batch(ind.handle, (*C.double)(unsafe.Pointer(&fundingRate[0])), (*C.double)(unsafe.Pointer(&markPrice[0])), (*C.double)(unsafe.Pointer(&indexPrice[0])), (*C.double)(unsafe.Pointer(&futuresPrice[0])), (*C.double)(unsafe.Pointer(&openInterest[0])), (*C.double)(unsafe.Pointer(&longSize[0])), (*C.double)(unsafe.Pointer(&shortSize[0])), (*C.double)(unsafe.Pointer(&takerBuyVolume[0])), (*C.double)(unsafe.Pointer(&takerSellVolume[0])), (*C.double)(unsafe.Pointer(&longLiquidation[0])), (*C.double)(unsafe.Pointer(&shortLiquidation[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(fundingRate)
+	runtime.KeepAlive(markPrice)
+	runtime.KeepAlive(indexPrice)
+	runtime.KeepAlive(futuresPrice)
+	runtime.KeepAlive(openInterest)
+	runtime.KeepAlive(longSize)
+	runtime.KeepAlive(shortSize)
+	runtime.KeepAlive(takerBuyVolume)
+	runtime.KeepAlive(takerSellVolume)
+	runtime.KeepAlive(longLiquidation)
+	runtime.KeepAlive(shortLiquidation)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -35867,6 +42524,10 @@ type ThreeLineBreak struct {
 // NewThreeLineBreak constructs a ThreeLineBreak. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewThreeLineBreak(lines int) (*ThreeLineBreak, error) {
+	if lines < 0 {
+		return nil, fmt.Errorf("%w: lines must not be negative, got %d",
+			ErrInvalidParams, lines)
+	}
 	ptr := C.wickra_three_line_break_new(C.uintptr_t(lines))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35965,6 +42626,10 @@ type ThreeLineBreakBars struct {
 // NewThreeLineBreakBars constructs a ThreeLineBreakBars. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewThreeLineBreakBars(lines int) (*ThreeLineBreakBars, error) {
+	if lines < 0 {
+		return nil, fmt.Errorf("%w: lines must not be negative, got %d",
+			ErrInvalidParams, lines)
+	}
 	ptr := C.wickra_three_line_break_bars_new(C.uintptr_t(lines))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -35992,7 +42657,64 @@ func (ind *ThreeLineBreakBars) Update(open float64, high float64, low float64, c
 		return nil
 	}
 	out := make([]LineBreakBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = LineBreakBar{float64(buf[i].open), float64(buf[i].close), int8(buf[i].direction)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraLineBreakBar, n-capacity)
+		got := int(C.wickra_three_line_break_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = LineBreakBar{float64(rest[i].open), float64(rest[i].close), int8(rest[i].direction)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *ThreeLineBreakBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []LineBreakBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_three_line_break_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraLineBreakBar, total)
+	got := int(C.wickra_three_line_break_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]LineBreakBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = LineBreakBar{float64(buf[i].open), float64(buf[i].close), int8(buf[i].direction)}
 	}
 	return out
@@ -36557,6 +43279,10 @@ type TickBars struct {
 // NewTickBars constructs a TickBars. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTickBars(ticks int) (*TickBars, error) {
+	if ticks < 0 {
+		return nil, fmt.Errorf("%w: ticks must not be negative, got %d",
+			ErrInvalidParams, ticks)
+	}
 	ptr := C.wickra_tick_bars_new(C.uintptr_t(ticks))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -36584,7 +43310,64 @@ func (ind *TickBars) Update(open float64, high float64, low float64, close float
 		return nil
 	}
 	out := make([]TickBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = TickBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraTickBar, n-capacity)
+		got := int(C.wickra_tick_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = TickBar{float64(rest[i].open), float64(rest[i].high), float64(rest[i].low), float64(rest[i].close), float64(rest[i].volume)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *TickBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TickBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_tick_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraTickBar, total)
+	got := int(C.wickra_tick_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]TickBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = TickBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume)}
 	}
 	return out
@@ -36675,6 +43458,51 @@ func (ind *TickIndex) Update(change []float64, volume []float64, newHigh []bool,
 	return r
 }
 
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *TickIndex) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_tick_index_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TickIndex) Reset() {
 	C.wickra_tick_index_reset(ind.handle)
@@ -36699,6 +43527,14 @@ type Tii struct {
 // NewTii constructs a Tii. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTii(smaPeriod int, devPeriod int) (*Tii, error) {
+	if smaPeriod < 0 {
+		return nil, fmt.Errorf("%w: smaPeriod must not be negative, got %d",
+			ErrInvalidParams, smaPeriod)
+	}
+	if devPeriod < 0 {
+		return nil, fmt.Errorf("%w: devPeriod must not be negative, got %d",
+			ErrInvalidParams, devPeriod)
+	}
 	ptr := C.wickra_tii_new(C.uintptr_t(smaPeriod), C.uintptr_t(devPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -36777,6 +43613,10 @@ type TimeBasedStop struct {
 // NewTimeBasedStop constructs a TimeBasedStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTimeBasedStop(maxBars int) (*TimeBasedStop, error) {
+	if maxBars < 0 {
+		return nil, fmt.Errorf("%w: maxBars must not be negative, got %d",
+			ErrInvalidParams, maxBars)
+	}
 	ptr := C.wickra_time_based_stop_new(C.uintptr_t(maxBars))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -36876,12 +43716,16 @@ type TimeOfDayReturnProfile struct {
 // NewTimeOfDayReturnProfile constructs a TimeOfDayReturnProfile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTimeOfDayReturnProfile(buckets int, utcOffsetMinutes int32) (*TimeOfDayReturnProfile, error) {
+	if buckets < 0 {
+		return nil, fmt.Errorf("%w: buckets must not be negative, got %d",
+			ErrInvalidParams, buckets)
+	}
 	ptr := C.wickra_time_of_day_return_profile_new(C.uintptr_t(buckets), C.int32_t(utcOffsetMinutes))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
 	obj := &TimeOfDayReturnProfile{handle: ptr}
-	obj.valuesCap = buckets
+	obj.valuesCap = int(C.wickra_time_of_day_return_profile_width(ptr))
 	runtime.SetFinalizer(obj, (*TimeOfDayReturnProfile).Close)
 	return obj, nil
 }
@@ -36919,6 +43763,45 @@ func (ind *TimeOfDayReturnProfile) Update(open float64, high float64, low float6
 		return nil, false
 	}
 	return values[:n], true
+}
+
+// Batch feeds a whole series in one FFI call and returns one profile per
+// input. A row the indicator did not produce carries NaN.
+func (ind *TimeOfDayReturnProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) [][]float64 {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	width := ind.valuesCap
+	flat := make([]float64, n*width)
+	C.wickra_time_of_day_return_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&flat[0])), C.uintptr_t(width), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	out := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		out[i] = flat[i*width : (i+1)*width]
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -37044,12 +43927,20 @@ type TpoProfile struct {
 // NewTpoProfile constructs a TpoProfile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTpoProfile(period int, binCount int) (*TpoProfile, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if binCount < 0 {
+		return nil, fmt.Errorf("%w: binCount must not be negative, got %d",
+			ErrInvalidParams, binCount)
+	}
 	ptr := C.wickra_tpo_profile_new(C.uintptr_t(period), C.uintptr_t(binCount))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
 	obj := &TpoProfile{handle: ptr}
-	obj.valuesCap = binCount
+	obj.valuesCap = int(C.wickra_tpo_profile_width(ptr))
 	runtime.SetFinalizer(obj, (*TpoProfile).Close)
 	return obj, nil
 }
@@ -37090,6 +43981,46 @@ func (ind *TpoProfile) Update(open float64, high float64, low float64, close flo
 	return TpoProfileOutputScalars{PriceLow: float64(sc.price_low), PriceHigh: float64(sc.price_high), Values: values[:n]}, true
 }
 
+// Batch feeds a whole series in one FFI call and returns one profile per
+// input. A row the indicator did not produce carries NaN.
+func (ind *TpoProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TpoProfileOutputScalars {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	width := ind.valuesCap
+	flat := make([]float64, n*width)
+	sc := make([]C.struct_WickraTpoProfileOutputScalars, n)
+	C.wickra_tpo_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &sc[0], (*C.double)(unsafe.Pointer(&flat[0])), C.uintptr_t(width), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	out := make([]TpoProfileOutputScalars, n)
+	for i := 0; i < n; i++ {
+		out[i] = TpoProfileOutputScalars{PriceLow: float64(sc[i].price_low), PriceHigh: float64(sc[i].price_high), Values: flat[i*width : (i+1)*width]}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TpoProfile) Reset() {
 	C.wickra_tpo_profile_reset(ind.handle)
@@ -37114,6 +44045,10 @@ type TradeImbalance struct {
 // NewTradeImbalance constructs a TradeImbalance. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTradeImbalance(window int) (*TradeImbalance, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
 	ptr := C.wickra_trade_imbalance_new(C.uintptr_t(window))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37154,6 +44089,32 @@ func (ind *TradeImbalance) Update(price float64, size float64, isBuy bool, times
 	return r
 }
 
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *TradeImbalance) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_trade_imbalance_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TradeImbalance) Reset() {
 	C.wickra_trade_imbalance_reset(ind.handle)
@@ -37178,6 +44139,10 @@ type TradeSignAutocorrelation struct {
 // NewTradeSignAutocorrelation constructs a TradeSignAutocorrelation. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTradeSignAutocorrelation(period int) (*TradeSignAutocorrelation, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_trade_sign_autocorrelation_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37216,6 +44181,32 @@ func (ind *TradeSignAutocorrelation) Update(price float64, size float64, isBuy b
 	r := float64(C.wickra_trade_sign_autocorrelation_update(ind.handle, C.double(price), C.double(size), C.bool(isBuy), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *TradeSignAutocorrelation) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_trade_sign_autocorrelation_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -37340,6 +44331,10 @@ type TrendLabel struct {
 // NewTrendLabel constructs a TrendLabel. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTrendLabel(period int) (*TrendLabel, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_trend_label_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37418,6 +44413,10 @@ type TrendStrengthIndex struct {
 // NewTrendStrengthIndex constructs a TrendStrengthIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTrendStrengthIndex(period int) (*TrendStrengthIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_trend_strength_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37496,6 +44495,10 @@ type Trendflex struct {
 // NewTrendflex constructs a Trendflex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTrendflex(period int) (*Trendflex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_trendflex_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37574,6 +44577,10 @@ type TreynorRatio struct {
 // NewTreynorRatio constructs a TreynorRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTreynorRatio(period int, riskFree float64) (*TreynorRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_treynor_ratio_new(C.uintptr_t(period), C.double(riskFree))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37754,6 +44761,10 @@ type Trima struct {
 // NewTrima constructs a Trima. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTrima(period int) (*Trima, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_trima_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -37891,6 +44902,51 @@ func (ind *Trin) Update(change []float64, volume []float64, newHigh []bool, newL
 	runtime.KeepAlive(aboveMa)
 	runtime.KeepAlive(onBuySignal)
 	return r
+}
+
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *Trin) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_trin_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -38113,6 +45169,10 @@ type Trix struct {
 // NewTrix constructs a Trix. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTrix(period int) (*Trix, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_trix_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38289,6 +45349,10 @@ type Tsf struct {
 // NewTsf constructs a Tsf. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTsf(period int) (*Tsf, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_tsf_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38367,6 +45431,10 @@ type TsfOscillator struct {
 // NewTsfOscillator constructs a TsfOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTsfOscillator(period int) (*TsfOscillator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_tsf_oscillator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38445,6 +45513,14 @@ type Tsi struct {
 // NewTsi constructs a Tsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTsi(long int, short int) (*Tsi, error) {
+	if long < 0 {
+		return nil, fmt.Errorf("%w: long must not be negative, got %d",
+			ErrInvalidParams, long)
+	}
+	if short < 0 {
+		return nil, fmt.Errorf("%w: short must not be negative, got %d",
+			ErrInvalidParams, short)
+	}
 	ptr := C.wickra_tsi_new(C.uintptr_t(long), C.uintptr_t(short))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38523,6 +45599,10 @@ type Tsv struct {
 // NewTsv constructs a Tsv. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTsv(period int) (*Tsv, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_tsv_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38621,6 +45701,10 @@ type TtmSqueeze struct {
 // NewTtmSqueeze constructs a TtmSqueeze. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTtmSqueeze(period int, bbMult float64, kcMult float64) (*TtmSqueeze, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ttm_squeeze_new(C.uintptr_t(period), C.double(bbMult), C.double(kcMult))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38665,6 +45749,45 @@ func (ind *TtmSqueeze) Update(open float64, high float64, low float64, close flo
 	return TtmSqueezeOutput{float64(out.squeeze), float64(out.momentum)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *TtmSqueeze) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []TtmSqueezeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]TtmSqueezeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraTtmSqueezeOutput, n)
+	C.wickra_ttm_squeeze_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = TtmSqueezeOutput{float64(buf[i].squeeze), float64(buf[i].momentum)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *TtmSqueeze) Reset() {
 	C.wickra_ttm_squeeze_reset(ind.handle)
@@ -38689,6 +45812,10 @@ type TtmTrend struct {
 // NewTtmTrend constructs a TtmTrend. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTtmTrend(period int) (*TtmTrend, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ttm_trend_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -38983,6 +46110,10 @@ type TwiggsMoneyFlow struct {
 // NewTwiggsMoneyFlow constructs a TwiggsMoneyFlow. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewTwiggsMoneyFlow(period int) (*TwiggsMoneyFlow, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_twiggs_money_flow_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -39277,6 +46408,10 @@ type UlcerIndex struct {
 // NewUlcerIndex constructs a UlcerIndex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewUlcerIndex(period int) (*UlcerIndex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_ulcer_index_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -39355,6 +46490,18 @@ type UltimateOscillator struct {
 // NewUltimateOscillator constructs a UltimateOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewUltimateOscillator(short int, mid int, long int) (*UltimateOscillator, error) {
+	if short < 0 {
+		return nil, fmt.Errorf("%w: short must not be negative, got %d",
+			ErrInvalidParams, short)
+	}
+	if mid < 0 {
+		return nil, fmt.Errorf("%w: mid must not be negative, got %d",
+			ErrInvalidParams, mid)
+	}
+	if long < 0 {
+		return nil, fmt.Errorf("%w: long must not be negative, got %d",
+			ErrInvalidParams, long)
+	}
 	ptr := C.wickra_ultimate_oscillator_new(C.uintptr_t(short), C.uintptr_t(mid), C.uintptr_t(long))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -39551,6 +46698,10 @@ type UniversalOscillator struct {
 // NewUniversalOscillator constructs a UniversalOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewUniversalOscillator(period int) (*UniversalOscillator, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_universal_oscillator_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -39688,6 +46839,51 @@ func (ind *UpDownVolumeRatio) Update(change []float64, volume []float64, newHigh
 	runtime.KeepAlive(aboveMa)
 	runtime.KeepAlive(onBuySignal)
 	return r
+}
+
+// Batch feeds a whole series in one FFI call and returns the per-bar
+// output. Every snapshot carries the same width, so the per-member
+// slices are flat: bar i occupies elements [i*width, (i+1)*width).
+func (ind *UpDownVolumeRatio) Batch(change []float64, volume []float64, newHigh []bool, newLow []bool, aboveMa []bool, onBuySignal []bool, members int, timestamp []int64) []float64 {
+	if members <= 0 {
+		panic("wickra: the per-bar width must be positive")
+	}
+	n := len(timestamp)
+	if len(change) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(volume) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newHigh) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(newLow) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(aboveMa) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(onBuySignal) != n*members {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	if len(timestamp) != n {
+		panic("wickra: every input slice must cover the whole series")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_up_down_volume_ratio_batch(ind.handle, (*C.double)(unsafe.Pointer(&change[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.bool)(unsafe.Pointer(&newHigh[0])), (*C.bool)(unsafe.Pointer(&newLow[0])), (*C.bool)(unsafe.Pointer(&aboveMa[0])), (*C.bool)(unsafe.Pointer(&onBuySignal[0])), C.uintptr_t(members), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(change)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(newHigh)
+	runtime.KeepAlive(newLow)
+	runtime.KeepAlive(aboveMa)
+	runtime.KeepAlive(onBuySignal)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -39910,6 +47106,10 @@ type UpsidePotentialRatio struct {
 // NewUpsidePotentialRatio constructs a UpsidePotentialRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewUpsidePotentialRatio(period int, mar float64) (*UpsidePotentialRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_upside_potential_ratio_new(C.uintptr_t(period), C.double(mar))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -39988,6 +47188,14 @@ type ValueArea struct {
 // NewValueArea constructs a ValueArea. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewValueArea(period int, binCount int, valueAreaPct float64) (*ValueArea, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if binCount < 0 {
+		return nil, fmt.Errorf("%w: binCount must not be negative, got %d",
+			ErrInvalidParams, binCount)
+	}
 	ptr := C.wickra_value_area_new(C.uintptr_t(period), C.uintptr_t(binCount), C.double(valueAreaPct))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40032,6 +47240,45 @@ func (ind *ValueArea) Update(open float64, high float64, low float64, close floa
 	return ValueAreaOutput{float64(out.poc), float64(out.vah), float64(out.val)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ValueArea) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ValueAreaOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ValueAreaOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraValueAreaOutput, n)
+	C.wickra_value_area_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ValueAreaOutput{float64(buf[i].poc), float64(buf[i].vah), float64(buf[i].val)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ValueArea) Reset() {
 	C.wickra_value_area_reset(ind.handle)
@@ -40056,6 +47303,10 @@ type ValueAtRisk struct {
 // NewValueAtRisk constructs a ValueAtRisk. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewValueAtRisk(period int, confidence float64) (*ValueAtRisk, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_value_at_risk_new(C.uintptr_t(period), C.double(confidence))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40134,6 +47385,10 @@ type Variance struct {
 // NewVariance constructs a Variance. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVariance(period int) (*Variance, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_variance_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40212,6 +47467,14 @@ type VarianceRatio struct {
 // NewVarianceRatio constructs a VarianceRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVarianceRatio(period int, q int) (*VarianceRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if q < 0 {
+		return nil, fmt.Errorf("%w: q must not be negative, got %d",
+			ErrInvalidParams, q)
+	}
 	ptr := C.wickra_variance_ratio_new(C.uintptr_t(period), C.uintptr_t(q))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40294,6 +47557,10 @@ type VerticalHorizontalFilter struct {
 // NewVerticalHorizontalFilter constructs a VerticalHorizontalFilter. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVerticalHorizontalFilter(period int) (*VerticalHorizontalFilter, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_vertical_horizontal_filter_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40372,6 +47639,14 @@ type Vidya struct {
 // NewVidya constructs a Vidya. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVidya(period int, cmoPeriod int) (*Vidya, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if cmoPeriod < 0 {
+		return nil, fmt.Errorf("%w: cmoPeriod must not be negative, got %d",
+			ErrInvalidParams, cmoPeriod)
+	}
 	ptr := C.wickra_vidya_new(C.uintptr_t(period), C.uintptr_t(cmoPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40450,6 +47725,14 @@ type VolatilityCone struct {
 // NewVolatilityCone constructs a VolatilityCone. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolatilityCone(window int, lookback int) (*VolatilityCone, error) {
+	if window < 0 {
+		return nil, fmt.Errorf("%w: window must not be negative, got %d",
+			ErrInvalidParams, window)
+	}
+	if lookback < 0 {
+		return nil, fmt.Errorf("%w: lookback must not be negative, got %d",
+			ErrInvalidParams, lookback)
+	}
 	ptr := C.wickra_volatility_cone_new(C.uintptr_t(window), C.uintptr_t(lookback))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40494,6 +47777,45 @@ func (ind *VolatilityCone) Update(open float64, high float64, low float64, close
 	return VolatilityConeOutput{float64(out.current), float64(out.min), float64(out.median), float64(out.max), float64(out.percentile)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *VolatilityCone) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VolatilityConeOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]VolatilityConeOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraVolatilityConeOutput, n)
+	C.wickra_volatility_cone_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = VolatilityConeOutput{float64(buf[i].current), float64(buf[i].min), float64(buf[i].median), float64(buf[i].max), float64(buf[i].percentile)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *VolatilityCone) Reset() {
 	C.wickra_volatility_cone_reset(ind.handle)
@@ -40518,6 +47840,14 @@ type VolatilityOfVolatility struct {
 // NewVolatilityOfVolatility constructs a VolatilityOfVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolatilityOfVolatility(volWindow int, vovWindow int) (*VolatilityOfVolatility, error) {
+	if volWindow < 0 {
+		return nil, fmt.Errorf("%w: volWindow must not be negative, got %d",
+			ErrInvalidParams, volWindow)
+	}
+	if vovWindow < 0 {
+		return nil, fmt.Errorf("%w: vovWindow must not be negative, got %d",
+			ErrInvalidParams, vovWindow)
+	}
 	ptr := C.wickra_volatility_of_volatility_new(C.uintptr_t(volWindow), C.uintptr_t(vovWindow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40596,6 +47926,10 @@ type VolatilityRatio struct {
 // NewVolatilityRatio constructs a VolatilityRatio. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolatilityRatio(period int) (*VolatilityRatio, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_volatility_ratio_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40694,6 +48028,10 @@ type VoltyStop struct {
 // NewVoltyStop constructs a VoltyStop. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVoltyStop(atrPeriod int, multiplier float64) (*VoltyStop, error) {
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_volty_stop_new(C.uintptr_t(atrPeriod), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -40819,7 +48157,64 @@ func (ind *VolumeBars) Update(open float64, high float64, low float64, close flo
 		return nil
 	}
 	out := make([]VolumeBar, n)
-	for i := 0; i < n; i++ {
+	written := n
+	if written > capacity {
+		written = capacity
+	}
+	for i := 0; i < written; i++ {
+		out[i] = VolumeBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume)}
+	}
+	if n > capacity {
+		// One input produced more elements than the buffer holds; the
+		// surplus waits on the handle rather than being dropped.
+		rest := make([]C.struct_WickraVolumeBar, n-capacity)
+		got := int(C.wickra_volume_bars_drain(ind.handle, &rest[0], C.uintptr_t(len(rest))))
+		runtime.KeepAlive(ind)
+		for i := 0; i < got; i++ {
+			out[capacity+i] = VolumeBar{float64(rest[i].open), float64(rest[i].high), float64(rest[i].low), float64(rest[i].close), float64(rest[i].volume)}
+		}
+	}
+	return out
+}
+
+// Batch feeds a whole series in one FFI call and returns every bar it
+// completed. The count depends on the data, not on the input length.
+func (ind *VolumeBars) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VolumeBar {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	total := int(C.wickra_volume_bars_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), C.uintptr_t(n)))
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	if total <= 0 {
+		runtime.KeepAlive(ind)
+		return nil
+	}
+	buf := make([]C.struct_WickraVolumeBar, total)
+	got := int(C.wickra_volume_bars_drain(ind.handle, &buf[0], C.uintptr_t(total)))
+	runtime.KeepAlive(ind)
+	out := make([]VolumeBar, got)
+	for i := 0; i < got; i++ {
 		out[i] = VolumeBar{float64(buf[i].open), float64(buf[i].high), float64(buf[i].low), float64(buf[i].close), float64(buf[i].volume)}
 	}
 	return out
@@ -40850,12 +48245,16 @@ type VolumeByTimeProfile struct {
 // NewVolumeByTimeProfile constructs a VolumeByTimeProfile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolumeByTimeProfile(buckets int, utcOffsetMinutes int32) (*VolumeByTimeProfile, error) {
+	if buckets < 0 {
+		return nil, fmt.Errorf("%w: buckets must not be negative, got %d",
+			ErrInvalidParams, buckets)
+	}
 	ptr := C.wickra_volume_by_time_profile_new(C.uintptr_t(buckets), C.int32_t(utcOffsetMinutes))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
 	obj := &VolumeByTimeProfile{handle: ptr}
-	obj.valuesCap = buckets
+	obj.valuesCap = int(C.wickra_volume_by_time_profile_width(ptr))
 	runtime.SetFinalizer(obj, (*VolumeByTimeProfile).Close)
 	return obj, nil
 }
@@ -40895,6 +48294,45 @@ func (ind *VolumeByTimeProfile) Update(open float64, high float64, low float64, 
 	return values[:n], true
 }
 
+// Batch feeds a whole series in one FFI call and returns one profile per
+// input. A row the indicator did not produce carries NaN.
+func (ind *VolumeByTimeProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) [][]float64 {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	width := ind.valuesCap
+	flat := make([]float64, n*width)
+	C.wickra_volume_by_time_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&flat[0])), C.uintptr_t(width), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	out := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		out[i] = flat[i*width : (i+1)*width]
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *VolumeByTimeProfile) Reset() {
 	C.wickra_volume_by_time_profile_reset(ind.handle)
@@ -40919,6 +48357,14 @@ type VolumeOscillator struct {
 // NewVolumeOscillator constructs a VolumeOscillator. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolumeOscillator(fast int, slow int) (*VolumeOscillator, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
 	ptr := C.wickra_volume_oscillator_new(C.uintptr_t(fast), C.uintptr_t(slow))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41116,12 +48562,20 @@ type VolumeProfile struct {
 // NewVolumeProfile constructs a VolumeProfile. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolumeProfile(period int, binCount int) (*VolumeProfile, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if binCount < 0 {
+		return nil, fmt.Errorf("%w: binCount must not be negative, got %d",
+			ErrInvalidParams, binCount)
+	}
 	ptr := C.wickra_volume_profile_new(C.uintptr_t(period), C.uintptr_t(binCount))
 	if ptr == nil {
 		return nil, ErrInvalidParams
 	}
 	obj := &VolumeProfile{handle: ptr}
-	obj.valuesCap = binCount
+	obj.valuesCap = int(C.wickra_volume_profile_width(ptr))
 	runtime.SetFinalizer(obj, (*VolumeProfile).Close)
 	return obj, nil
 }
@@ -41162,6 +48616,46 @@ func (ind *VolumeProfile) Update(open float64, high float64, low float64, close 
 	return VolumeProfileOutputScalars{PriceLow: float64(sc.price_low), PriceHigh: float64(sc.price_high), Values: values[:n]}, true
 }
 
+// Batch feeds a whole series in one FFI call and returns one profile per
+// input. A row the indicator did not produce carries NaN.
+func (ind *VolumeProfile) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VolumeProfileOutputScalars {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if n == 0 {
+		return nil
+	}
+	width := ind.valuesCap
+	flat := make([]float64, n*width)
+	sc := make([]C.struct_WickraVolumeProfileOutputScalars, n)
+	C.wickra_volume_profile_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &sc[0], (*C.double)(unsafe.Pointer(&flat[0])), C.uintptr_t(width), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	out := make([]VolumeProfileOutputScalars, n)
+	for i := 0; i < n; i++ {
+		out[i] = VolumeProfileOutputScalars{PriceLow: float64(sc[i].price_low), PriceHigh: float64(sc[i].price_high), Values: flat[i*width : (i+1)*width]}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *VolumeProfile) Reset() {
 	C.wickra_volume_profile_reset(ind.handle)
@@ -41186,6 +48680,10 @@ type VolumeRsi struct {
 // NewVolumeRsi constructs a VolumeRsi. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolumeRsi(period int) (*VolumeRsi, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_volume_rsi_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41284,6 +48782,18 @@ type VolumeWeightedMacd struct {
 // NewVolumeWeightedMacd constructs a VolumeWeightedMacd. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolumeWeightedMacd(fast int, slow int, signal int) (*VolumeWeightedMacd, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_volume_weighted_macd_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41328,6 +48838,45 @@ func (ind *VolumeWeightedMacd) Update(open float64, high float64, low float64, c
 	return VolumeWeightedMacdOutput{float64(out.macd), float64(out.signal), float64(out.histogram)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *VolumeWeightedMacd) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VolumeWeightedMacdOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]VolumeWeightedMacdOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraVolumeWeightedMacdOutput, n)
+	C.wickra_volume_weighted_macd_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = VolumeWeightedMacdOutput{float64(buf[i].macd), float64(buf[i].signal), float64(buf[i].histogram)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *VolumeWeightedMacd) Reset() {
 	C.wickra_volume_weighted_macd_reset(ind.handle)
@@ -41352,6 +48901,10 @@ type VolumeWeightedSr struct {
 // NewVolumeWeightedSr constructs a VolumeWeightedSr. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVolumeWeightedSr(period int) (*VolumeWeightedSr, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_volume_weighted_sr_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41396,6 +48949,45 @@ func (ind *VolumeWeightedSr) Update(open float64, high float64, low float64, clo
 	return VolumeWeightedSrOutput{float64(out.support), float64(out.resistance)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *VolumeWeightedSr) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VolumeWeightedSrOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]VolumeWeightedSrOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraVolumeWeightedSrOutput, n)
+	C.wickra_volume_weighted_sr_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = VolumeWeightedSrOutput{float64(buf[i].support), float64(buf[i].resistance)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *VolumeWeightedSr) Reset() {
 	C.wickra_volume_weighted_sr_reset(ind.handle)
@@ -41420,6 +49012,10 @@ type Vortex struct {
 // NewVortex constructs a Vortex. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVortex(period int) (*Vortex, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_vortex_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41464,6 +49060,45 @@ func (ind *Vortex) Update(open float64, high float64, low float64, close float64
 	return VortexOutput{float64(out.plus), float64(out.minus)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *Vortex) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VortexOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]VortexOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraVortexOutput, n)
+	C.wickra_vortex_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = VortexOutput{float64(buf[i].plus), float64(buf[i].minus)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *Vortex) Reset() {
 	C.wickra_vortex_reset(ind.handle)
@@ -41488,6 +49123,10 @@ type Vpin struct {
 // NewVpin constructs a Vpin. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVpin(bucketVolume float64, numBuckets int) (*Vpin, error) {
+	if numBuckets < 0 {
+		return nil, fmt.Errorf("%w: numBuckets must not be negative, got %d",
+			ErrInvalidParams, numBuckets)
+	}
 	ptr := C.wickra_vpin_new(C.double(bucketVolume), C.uintptr_t(numBuckets))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41526,6 +49165,32 @@ func (ind *Vpin) Update(price float64, size float64, isBuy bool, timestamp int64
 	r := float64(C.wickra_vpin_update(ind.handle, C.double(price), C.double(size), C.bool(isBuy), C.int64_t(timestamp)))
 	runtime.KeepAlive(ind)
 	return r
+}
+
+// Batch runs the indicator over a whole slice in one FFI call and
+// returns the per-element output (NaN during warmup).
+func (ind *Vpin) Batch(price []float64, size []float64, isBuy []bool, timestamp []int64) []float64 {
+	n := len(price)
+	if len(size) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(isBuy) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]float64, n)
+	if n == 0 {
+		return out
+	}
+	C.wickra_vpin_batch(ind.handle, (*C.double)(unsafe.Pointer(&price[0])), (*C.double)(unsafe.Pointer(&size[0])), (*C.bool)(unsafe.Pointer(&isBuy[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), (*C.double)(unsafe.Pointer(&out[0])), C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(price)
+	runtime.KeepAlive(size)
+	runtime.KeepAlive(isBuy)
+	runtime.KeepAlive(timestamp)
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -41694,6 +49359,45 @@ func (ind *VwapStdDevBands) Update(open float64, high float64, low float64, clos
 	return VwapStdDevBandsOutput{float64(out.upper), float64(out.middle), float64(out.lower), float64(out.stddev)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *VwapStdDevBands) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []VwapStdDevBandsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]VwapStdDevBandsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraVwapStdDevBandsOutput, n)
+	C.wickra_vwap_std_dev_bands_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = VwapStdDevBandsOutput{float64(buf[i].upper), float64(buf[i].middle), float64(buf[i].lower), float64(buf[i].stddev)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *VwapStdDevBands) Reset() {
 	C.wickra_vwap_std_dev_bands_reset(ind.handle)
@@ -41718,6 +49422,10 @@ type Vwma struct {
 // NewVwma constructs a Vwma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVwma(period int) (*Vwma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_vwma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -41816,6 +49524,10 @@ type Vzo struct {
 // NewVzo constructs a Vzo. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewVzo(period int) (*Vzo, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_vzo_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42012,6 +49724,14 @@ type WavePm struct {
 // NewWavePm constructs a WavePm. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewWavePm(length int, smoothing int) (*WavePm, error) {
+	if length < 0 {
+		return nil, fmt.Errorf("%w: length must not be negative, got %d",
+			ErrInvalidParams, length)
+	}
+	if smoothing < 0 {
+		return nil, fmt.Errorf("%w: smoothing must not be negative, got %d",
+			ErrInvalidParams, smoothing)
+	}
 	ptr := C.wickra_wave_pm_new(C.uintptr_t(length), C.uintptr_t(smoothing))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42090,6 +49810,18 @@ type WaveTrend struct {
 // NewWaveTrend constructs a WaveTrend. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewWaveTrend(channelPeriod int, averagePeriod int, signalPeriod int) (*WaveTrend, error) {
+	if channelPeriod < 0 {
+		return nil, fmt.Errorf("%w: channelPeriod must not be negative, got %d",
+			ErrInvalidParams, channelPeriod)
+	}
+	if averagePeriod < 0 {
+		return nil, fmt.Errorf("%w: averagePeriod must not be negative, got %d",
+			ErrInvalidParams, averagePeriod)
+	}
+	if signalPeriod < 0 {
+		return nil, fmt.Errorf("%w: signalPeriod must not be negative, got %d",
+			ErrInvalidParams, signalPeriod)
+	}
 	ptr := C.wickra_wave_trend_new(C.uintptr_t(channelPeriod), C.uintptr_t(averagePeriod), C.uintptr_t(signalPeriod))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42132,6 +49864,45 @@ func (ind *WaveTrend) Update(open float64, high float64, low float64, close floa
 		return WaveTrendOutput{}, false
 	}
 	return WaveTrendOutput{float64(out.wt1), float64(out.wt2)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *WaveTrend) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []WaveTrendOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]WaveTrendOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraWaveTrendOutput, n)
+	C.wickra_wave_trend_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = WaveTrendOutput{float64(buf[i].wt1), float64(buf[i].wt2)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -42496,6 +50267,45 @@ func (ind *WilliamsFractals) Update(open float64, high float64, low float64, clo
 	return WilliamsFractalsOutput{float64(out.up), float64(out.down)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *WilliamsFractals) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []WilliamsFractalsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]WilliamsFractalsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraWilliamsFractalsOutput, n)
+	C.wickra_williams_fractals_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = WilliamsFractalsOutput{float64(buf[i].up), float64(buf[i].down)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *WilliamsFractals) Reset() {
 	C.wickra_williams_fractals_reset(ind.handle)
@@ -42520,6 +50330,10 @@ type WilliamsR struct {
 // NewWilliamsR constructs a WilliamsR. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewWilliamsR(period int) (*WilliamsR, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_williams_r_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42618,6 +50432,10 @@ type WinRate struct {
 // NewWinRate constructs a WinRate. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewWinRate(period int) (*WinRate, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_win_rate_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42696,6 +50514,10 @@ type Wma struct {
 // NewWma constructs a Wma. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewWma(period int) (*Wma, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_wma_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42818,6 +50640,45 @@ func (ind *WoodiePivots) Update(open float64, high float64, low float64, close f
 	return WoodiePivotsOutput{float64(out.pp), float64(out.r1), float64(out.r2), float64(out.s1), float64(out.s2)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *WoodiePivots) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []WoodiePivotsOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]WoodiePivotsOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraWoodiePivotsOutput, n)
+	C.wickra_woodie_pivots_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = WoodiePivotsOutput{float64(buf[i].pp), float64(buf[i].r1), float64(buf[i].r2), float64(buf[i].s1), float64(buf[i].s2)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *WoodiePivots) Reset() {
 	C.wickra_woodie_pivots_reset(ind.handle)
@@ -42842,6 +50703,14 @@ type YangZhangVolatility struct {
 // NewYangZhangVolatility constructs a YangZhangVolatility. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewYangZhangVolatility(period int, tradingPeriods int) (*YangZhangVolatility, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
+	if tradingPeriods < 0 {
+		return nil, fmt.Errorf("%w: tradingPeriods must not be negative, got %d",
+			ErrInvalidParams, tradingPeriods)
+	}
 	ptr := C.wickra_yang_zhang_volatility_new(C.uintptr_t(period), C.uintptr_t(tradingPeriods))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -42940,6 +50809,10 @@ type YoyoExit struct {
 // NewYoyoExit constructs a YoyoExit. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewYoyoExit(atrPeriod int, multiplier float64) (*YoyoExit, error) {
+	if atrPeriod < 0 {
+		return nil, fmt.Errorf("%w: atrPeriod must not be negative, got %d",
+			ErrInvalidParams, atrPeriod)
+	}
 	ptr := C.wickra_yoyo_exit_new(C.uintptr_t(atrPeriod), C.double(multiplier))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -43038,6 +50911,10 @@ type ZScore struct {
 // NewZScore constructs a ZScore. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewZScore(period int) (*ZScore, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_z_score_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -43116,6 +50993,18 @@ type ZeroLagMacd struct {
 // NewZeroLagMacd constructs a ZeroLagMacd. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewZeroLagMacd(fast int, slow int, signal int) (*ZeroLagMacd, error) {
+	if fast < 0 {
+		return nil, fmt.Errorf("%w: fast must not be negative, got %d",
+			ErrInvalidParams, fast)
+	}
+	if slow < 0 {
+		return nil, fmt.Errorf("%w: slow must not be negative, got %d",
+			ErrInvalidParams, slow)
+	}
+	if signal < 0 {
+		return nil, fmt.Errorf("%w: signal must not be negative, got %d",
+			ErrInvalidParams, signal)
+	}
 	ptr := C.wickra_zero_lag_macd_new(C.uintptr_t(fast), C.uintptr_t(slow), C.uintptr_t(signal))
 	if ptr == nil {
 		return nil, ErrInvalidParams
@@ -43158,6 +51047,25 @@ func (ind *ZeroLagMacd) Update(value float64) (ZeroLagMacdOutput, bool) {
 		return ZeroLagMacdOutput{}, false
 	}
 	return ZeroLagMacdOutput{float64(out.macd), float64(out.signal), float64(out.histogram)}, true
+}
+
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ZeroLagMacd) Batch(input []float64) []ZeroLagMacdOutput {
+	n := len(input)
+	out := make([]ZeroLagMacdOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraZeroLagMacdOutput, n)
+	C.wickra_zero_lag_macd_batch(ind.handle, (*C.double)(unsafe.Pointer(&input[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(input)
+	for i := range buf {
+		out[i] = ZeroLagMacdOutput{float64(buf[i].macd), float64(buf[i].signal), float64(buf[i].histogram)}
+	}
+	return out
 }
 
 // Reset clears all internal state, returning the indicator to warmup.
@@ -43228,6 +51136,45 @@ func (ind *ZigZag) Update(open float64, high float64, low float64, close float64
 	return ZigZagOutput{float64(out.swing), float64(out.direction)}, true
 }
 
+// Batch runs the indicator over whole slices in one FFI call and returns
+// one output per input. A row the indicator did not produce -- warmup, or
+// an input it rejected -- carries NaN in every floating-point field.
+func (ind *ZigZag) Batch(open []float64, high []float64, low []float64, close []float64, volume []float64, timestamp []int64) []ZigZagOutput {
+	n := len(open)
+	if len(high) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(low) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(close) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(volume) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	if len(timestamp) != n {
+		panic("wickra: all input slices must have the same length")
+	}
+	out := make([]ZigZagOutput, n)
+	if n == 0 {
+		return out
+	}
+	buf := make([]C.struct_WickraZigZagOutput, n)
+	C.wickra_zig_zag_batch(ind.handle, (*C.double)(unsafe.Pointer(&open[0])), (*C.double)(unsafe.Pointer(&high[0])), (*C.double)(unsafe.Pointer(&low[0])), (*C.double)(unsafe.Pointer(&close[0])), (*C.double)(unsafe.Pointer(&volume[0])), (*C.int64_t)(unsafe.Pointer(&timestamp[0])), &buf[0], C.uintptr_t(n))
+	runtime.KeepAlive(ind)
+	runtime.KeepAlive(open)
+	runtime.KeepAlive(high)
+	runtime.KeepAlive(low)
+	runtime.KeepAlive(close)
+	runtime.KeepAlive(volume)
+	runtime.KeepAlive(timestamp)
+	for i := range buf {
+		out[i] = ZigZagOutput{float64(buf[i].swing), float64(buf[i].direction)}
+	}
+	return out
+}
+
 // Reset clears all internal state, returning the indicator to warmup.
 func (ind *ZigZag) Reset() {
 	C.wickra_zig_zag_reset(ind.handle)
@@ -43252,6 +51199,10 @@ type Zlema struct {
 // NewZlema constructs a Zlema. It returns ErrInvalidParams when the
 // native constructor rejects the arguments.
 func NewZlema(period int) (*Zlema, error) {
+	if period < 0 {
+		return nil, fmt.Errorf("%w: period must not be negative, got %d",
+			ErrInvalidParams, period)
+	}
 	ptr := C.wickra_zlema_new(C.uintptr_t(period))
 	if ptr == nil {
 		return nil, ErrInvalidParams

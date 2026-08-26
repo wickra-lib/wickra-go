@@ -1348,7 +1348,7 @@ typedef struct WickraKstOutput {
 } WickraKstOutput;
 
 typedef struct WickraLeadLagCrossCorrelationOutput {
-    int64_t lag;
+    double lag;
     double correlation;
 } WickraLeadLagCrossCorrelationOutput;
 
@@ -10437,6 +10437,14 @@ double wickra_amihud_illiquidity_update(struct AmihudIlliquidity *handle,
                                         bool is_buy,
                                         int64_t timestamp);
 
+void wickra_amihud_illiquidity_batch(struct AmihudIlliquidity *handle,
+                                     const double *price,
+                                     const double *size,
+                                     const bool *is_buy,
+                                     const int64_t *timestamp,
+                                     double *out,
+                                     uintptr_t n);
+
 uintptr_t wickra_amihud_illiquidity_warmup_period(struct AmihudIlliquidity *handle);
 
 bool wickra_amihud_illiquidity_is_ready(struct AmihudIlliquidity *handle);
@@ -10454,6 +10462,14 @@ double wickra_cumulative_volume_delta_update(struct CumulativeVolumeDelta *handl
                                              double size,
                                              bool is_buy,
                                              int64_t timestamp);
+
+void wickra_cumulative_volume_delta_batch(struct CumulativeVolumeDelta *handle,
+                                          const double *price,
+                                          const double *size,
+                                          const bool *is_buy,
+                                          const int64_t *timestamp,
+                                          double *out,
+                                          uintptr_t n);
 
 uintptr_t wickra_cumulative_volume_delta_warmup_period(struct CumulativeVolumeDelta *handle);
 
@@ -10473,6 +10489,14 @@ double wickra_pin_update(struct Pin *handle,
                          bool is_buy,
                          int64_t timestamp);
 
+void wickra_pin_batch(struct Pin *handle,
+                      const double *price,
+                      const double *size,
+                      const bool *is_buy,
+                      const int64_t *timestamp,
+                      double *out,
+                      uintptr_t n);
+
 uintptr_t wickra_pin_warmup_period(struct Pin *handle);
 
 bool wickra_pin_is_ready(struct Pin *handle);
@@ -10490,6 +10514,14 @@ double wickra_roll_measure_update(struct RollMeasure *handle,
                                   double size,
                                   bool is_buy,
                                   int64_t timestamp);
+
+void wickra_roll_measure_batch(struct RollMeasure *handle,
+                               const double *price,
+                               const double *size,
+                               const bool *is_buy,
+                               const int64_t *timestamp,
+                               double *out,
+                               uintptr_t n);
 
 uintptr_t wickra_roll_measure_warmup_period(struct RollMeasure *handle);
 
@@ -10509,6 +10541,14 @@ double wickra_signed_volume_update(struct SignedVolume *handle,
                                    bool is_buy,
                                    int64_t timestamp);
 
+void wickra_signed_volume_batch(struct SignedVolume *handle,
+                                const double *price,
+                                const double *size,
+                                const bool *is_buy,
+                                const int64_t *timestamp,
+                                double *out,
+                                uintptr_t n);
+
 uintptr_t wickra_signed_volume_warmup_period(struct SignedVolume *handle);
 
 bool wickra_signed_volume_is_ready(struct SignedVolume *handle);
@@ -10526,6 +10566,14 @@ double wickra_trade_imbalance_update(struct TradeImbalance *handle,
                                      double size,
                                      bool is_buy,
                                      int64_t timestamp);
+
+void wickra_trade_imbalance_batch(struct TradeImbalance *handle,
+                                  const double *price,
+                                  const double *size,
+                                  const bool *is_buy,
+                                  const int64_t *timestamp,
+                                  double *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_trade_imbalance_warmup_period(struct TradeImbalance *handle);
 
@@ -10545,6 +10593,14 @@ double wickra_trade_sign_autocorrelation_update(struct TradeSignAutocorrelation 
                                                 bool is_buy,
                                                 int64_t timestamp);
 
+void wickra_trade_sign_autocorrelation_batch(struct TradeSignAutocorrelation *handle,
+                                             const double *price,
+                                             const double *size,
+                                             const bool *is_buy,
+                                             const int64_t *timestamp,
+                                             double *out,
+                                             uintptr_t n);
+
 uintptr_t wickra_trade_sign_autocorrelation_warmup_period(struct TradeSignAutocorrelation *handle);
 
 bool wickra_trade_sign_autocorrelation_is_ready(struct TradeSignAutocorrelation *handle);
@@ -10562,6 +10618,14 @@ double wickra_vpin_update(struct Vpin *handle,
                           double size,
                           bool is_buy,
                           int64_t timestamp);
+
+void wickra_vpin_batch(struct Vpin *handle,
+                       const double *price,
+                       const double *size,
+                       const bool *is_buy,
+                       const int64_t *timestamp,
+                       double *out,
+                       uintptr_t n);
 
 uintptr_t wickra_vpin_warmup_period(struct Vpin *handle);
 
@@ -10582,6 +10646,15 @@ double wickra_effective_spread_update(struct EffectiveSpread *handle,
                                       int64_t timestamp,
                                       double mid);
 
+void wickra_effective_spread_batch(struct EffectiveSpread *handle,
+                                   const double *price,
+                                   const double *size,
+                                   const bool *is_buy,
+                                   const int64_t *timestamp,
+                                   const double *mid,
+                                   double *out,
+                                   uintptr_t n);
+
 uintptr_t wickra_effective_spread_warmup_period(struct EffectiveSpread *handle);
 
 bool wickra_effective_spread_is_ready(struct EffectiveSpread *handle);
@@ -10601,6 +10674,15 @@ double wickra_kyles_lambda_update(struct KylesLambda *handle,
                                   int64_t timestamp,
                                   double mid);
 
+void wickra_kyles_lambda_batch(struct KylesLambda *handle,
+                               const double *price,
+                               const double *size,
+                               const bool *is_buy,
+                               const int64_t *timestamp,
+                               const double *mid,
+                               double *out,
+                               uintptr_t n);
+
 uintptr_t wickra_kyles_lambda_warmup_period(struct KylesLambda *handle);
 
 bool wickra_kyles_lambda_is_ready(struct KylesLambda *handle);
@@ -10619,6 +10701,15 @@ double wickra_realized_spread_update(struct RealizedSpread *handle,
                                      bool is_buy,
                                      int64_t timestamp,
                                      double mid);
+
+void wickra_realized_spread_batch(struct RealizedSpread *handle,
+                                  const double *price,
+                                  const double *size,
+                                  const bool *is_buy,
+                                  const int64_t *timestamp,
+                                  const double *mid,
+                                  double *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_realized_spread_warmup_period(struct RealizedSpread *handle);
 
@@ -10646,6 +10737,22 @@ double wickra_calendar_spread_update(struct CalendarSpread *handle,
                                      double short_liquidation,
                                      int64_t timestamp);
 
+void wickra_calendar_spread_batch(struct CalendarSpread *handle,
+                                  const double *funding_rate,
+                                  const double *mark_price,
+                                  const double *index_price,
+                                  const double *futures_price,
+                                  const double *open_interest,
+                                  const double *long_size,
+                                  const double *short_size,
+                                  const double *taker_buy_volume,
+                                  const double *taker_sell_volume,
+                                  const double *long_liquidation,
+                                  const double *short_liquidation,
+                                  const int64_t *timestamp,
+                                  double *out,
+                                  uintptr_t n);
+
 uintptr_t wickra_calendar_spread_warmup_period(struct CalendarSpread *handle);
 
 bool wickra_calendar_spread_is_ready(struct CalendarSpread *handle);
@@ -10671,6 +10778,22 @@ double wickra_estimated_leverage_ratio_update(struct EstimatedLeverageRatio *han
                                               double long_liquidation,
                                               double short_liquidation,
                                               int64_t timestamp);
+
+void wickra_estimated_leverage_ratio_batch(struct EstimatedLeverageRatio *handle,
+                                           const double *funding_rate,
+                                           const double *mark_price,
+                                           const double *index_price,
+                                           const double *futures_price,
+                                           const double *open_interest,
+                                           const double *long_size,
+                                           const double *short_size,
+                                           const double *taker_buy_volume,
+                                           const double *taker_sell_volume,
+                                           const double *long_liquidation,
+                                           const double *short_liquidation,
+                                           const int64_t *timestamp,
+                                           double *out,
+                                           uintptr_t n);
 
 uintptr_t wickra_estimated_leverage_ratio_warmup_period(struct EstimatedLeverageRatio *handle);
 
@@ -10698,6 +10821,22 @@ double wickra_funding_basis_update(struct FundingBasis *handle,
                                    double short_liquidation,
                                    int64_t timestamp);
 
+void wickra_funding_basis_batch(struct FundingBasis *handle,
+                                const double *funding_rate,
+                                const double *mark_price,
+                                const double *index_price,
+                                const double *futures_price,
+                                const double *open_interest,
+                                const double *long_size,
+                                const double *short_size,
+                                const double *taker_buy_volume,
+                                const double *taker_sell_volume,
+                                const double *long_liquidation,
+                                const double *short_liquidation,
+                                const int64_t *timestamp,
+                                double *out,
+                                uintptr_t n);
+
 uintptr_t wickra_funding_basis_warmup_period(struct FundingBasis *handle);
 
 bool wickra_funding_basis_is_ready(struct FundingBasis *handle);
@@ -10723,6 +10862,22 @@ double wickra_funding_implied_apr_update(struct FundingImpliedApr *handle,
                                          double long_liquidation,
                                          double short_liquidation,
                                          int64_t timestamp);
+
+void wickra_funding_implied_apr_batch(struct FundingImpliedApr *handle,
+                                      const double *funding_rate,
+                                      const double *mark_price,
+                                      const double *index_price,
+                                      const double *futures_price,
+                                      const double *open_interest,
+                                      const double *long_size,
+                                      const double *short_size,
+                                      const double *taker_buy_volume,
+                                      const double *taker_sell_volume,
+                                      const double *long_liquidation,
+                                      const double *short_liquidation,
+                                      const int64_t *timestamp,
+                                      double *out,
+                                      uintptr_t n);
 
 uintptr_t wickra_funding_implied_apr_warmup_period(struct FundingImpliedApr *handle);
 
@@ -10750,6 +10905,22 @@ double wickra_funding_rate_update(struct FundingRate *handle,
                                   double short_liquidation,
                                   int64_t timestamp);
 
+void wickra_funding_rate_batch(struct FundingRate *handle,
+                               const double *funding_rate,
+                               const double *mark_price,
+                               const double *index_price,
+                               const double *futures_price,
+                               const double *open_interest,
+                               const double *long_size,
+                               const double *short_size,
+                               const double *taker_buy_volume,
+                               const double *taker_sell_volume,
+                               const double *long_liquidation,
+                               const double *short_liquidation,
+                               const int64_t *timestamp,
+                               double *out,
+                               uintptr_t n);
+
 uintptr_t wickra_funding_rate_warmup_period(struct FundingRate *handle);
 
 bool wickra_funding_rate_is_ready(struct FundingRate *handle);
@@ -10775,6 +10946,22 @@ double wickra_funding_rate_mean_update(struct FundingRateMean *handle,
                                        double long_liquidation,
                                        double short_liquidation,
                                        int64_t timestamp);
+
+void wickra_funding_rate_mean_batch(struct FundingRateMean *handle,
+                                    const double *funding_rate,
+                                    const double *mark_price,
+                                    const double *index_price,
+                                    const double *futures_price,
+                                    const double *open_interest,
+                                    const double *long_size,
+                                    const double *short_size,
+                                    const double *taker_buy_volume,
+                                    const double *taker_sell_volume,
+                                    const double *long_liquidation,
+                                    const double *short_liquidation,
+                                    const int64_t *timestamp,
+                                    double *out,
+                                    uintptr_t n);
 
 uintptr_t wickra_funding_rate_mean_warmup_period(struct FundingRateMean *handle);
 
@@ -10802,6 +10989,22 @@ double wickra_funding_rate_z_score_update(struct FundingRateZScore *handle,
                                           double short_liquidation,
                                           int64_t timestamp);
 
+void wickra_funding_rate_z_score_batch(struct FundingRateZScore *handle,
+                                       const double *funding_rate,
+                                       const double *mark_price,
+                                       const double *index_price,
+                                       const double *futures_price,
+                                       const double *open_interest,
+                                       const double *long_size,
+                                       const double *short_size,
+                                       const double *taker_buy_volume,
+                                       const double *taker_sell_volume,
+                                       const double *long_liquidation,
+                                       const double *short_liquidation,
+                                       const int64_t *timestamp,
+                                       double *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_funding_rate_z_score_warmup_period(struct FundingRateZScore *handle);
 
 bool wickra_funding_rate_z_score_is_ready(struct FundingRateZScore *handle);
@@ -10827,6 +11030,22 @@ double wickra_long_short_ratio_update(struct LongShortRatio *handle,
                                       double long_liquidation,
                                       double short_liquidation,
                                       int64_t timestamp);
+
+void wickra_long_short_ratio_batch(struct LongShortRatio *handle,
+                                   const double *funding_rate,
+                                   const double *mark_price,
+                                   const double *index_price,
+                                   const double *futures_price,
+                                   const double *open_interest,
+                                   const double *long_size,
+                                   const double *short_size,
+                                   const double *taker_buy_volume,
+                                   const double *taker_sell_volume,
+                                   const double *long_liquidation,
+                                   const double *short_liquidation,
+                                   const int64_t *timestamp,
+                                   double *out,
+                                   uintptr_t n);
 
 uintptr_t wickra_long_short_ratio_warmup_period(struct LongShortRatio *handle);
 
@@ -10854,6 +11073,22 @@ double wickra_open_interest_delta_update(struct OpenInterestDelta *handle,
                                          double short_liquidation,
                                          int64_t timestamp);
 
+void wickra_open_interest_delta_batch(struct OpenInterestDelta *handle,
+                                      const double *funding_rate,
+                                      const double *mark_price,
+                                      const double *index_price,
+                                      const double *futures_price,
+                                      const double *open_interest,
+                                      const double *long_size,
+                                      const double *short_size,
+                                      const double *taker_buy_volume,
+                                      const double *taker_sell_volume,
+                                      const double *long_liquidation,
+                                      const double *short_liquidation,
+                                      const int64_t *timestamp,
+                                      double *out,
+                                      uintptr_t n);
+
 uintptr_t wickra_open_interest_delta_warmup_period(struct OpenInterestDelta *handle);
 
 bool wickra_open_interest_delta_is_ready(struct OpenInterestDelta *handle);
@@ -10879,6 +11114,22 @@ double wickra_oi_price_divergence_update(struct OIPriceDivergence *handle,
                                          double long_liquidation,
                                          double short_liquidation,
                                          int64_t timestamp);
+
+void wickra_oi_price_divergence_batch(struct OIPriceDivergence *handle,
+                                      const double *funding_rate,
+                                      const double *mark_price,
+                                      const double *index_price,
+                                      const double *futures_price,
+                                      const double *open_interest,
+                                      const double *long_size,
+                                      const double *short_size,
+                                      const double *taker_buy_volume,
+                                      const double *taker_sell_volume,
+                                      const double *long_liquidation,
+                                      const double *short_liquidation,
+                                      const int64_t *timestamp,
+                                      double *out,
+                                      uintptr_t n);
 
 uintptr_t wickra_oi_price_divergence_warmup_period(struct OIPriceDivergence *handle);
 
@@ -10906,6 +11157,22 @@ double wickra_oi_to_volume_ratio_update(struct OiToVolumeRatio *handle,
                                         double short_liquidation,
                                         int64_t timestamp);
 
+void wickra_oi_to_volume_ratio_batch(struct OiToVolumeRatio *handle,
+                                     const double *funding_rate,
+                                     const double *mark_price,
+                                     const double *index_price,
+                                     const double *futures_price,
+                                     const double *open_interest,
+                                     const double *long_size,
+                                     const double *short_size,
+                                     const double *taker_buy_volume,
+                                     const double *taker_sell_volume,
+                                     const double *long_liquidation,
+                                     const double *short_liquidation,
+                                     const int64_t *timestamp,
+                                     double *out,
+                                     uintptr_t n);
+
 uintptr_t wickra_oi_to_volume_ratio_warmup_period(struct OiToVolumeRatio *handle);
 
 bool wickra_oi_to_volume_ratio_is_ready(struct OiToVolumeRatio *handle);
@@ -10931,6 +11198,22 @@ double wickra_oi_weighted_update(struct OIWeighted *handle,
                                  double long_liquidation,
                                  double short_liquidation,
                                  int64_t timestamp);
+
+void wickra_oi_weighted_batch(struct OIWeighted *handle,
+                              const double *funding_rate,
+                              const double *mark_price,
+                              const double *index_price,
+                              const double *futures_price,
+                              const double *open_interest,
+                              const double *long_size,
+                              const double *short_size,
+                              const double *taker_buy_volume,
+                              const double *taker_sell_volume,
+                              const double *long_liquidation,
+                              const double *short_liquidation,
+                              const int64_t *timestamp,
+                              double *out,
+                              uintptr_t n);
 
 uintptr_t wickra_oi_weighted_warmup_period(struct OIWeighted *handle);
 
@@ -10958,6 +11241,22 @@ double wickra_open_interest_momentum_update(struct OpenInterestMomentum *handle,
                                             double short_liquidation,
                                             int64_t timestamp);
 
+void wickra_open_interest_momentum_batch(struct OpenInterestMomentum *handle,
+                                         const double *funding_rate,
+                                         const double *mark_price,
+                                         const double *index_price,
+                                         const double *futures_price,
+                                         const double *open_interest,
+                                         const double *long_size,
+                                         const double *short_size,
+                                         const double *taker_buy_volume,
+                                         const double *taker_sell_volume,
+                                         const double *long_liquidation,
+                                         const double *short_liquidation,
+                                         const int64_t *timestamp,
+                                         double *out,
+                                         uintptr_t n);
+
 uintptr_t wickra_open_interest_momentum_warmup_period(struct OpenInterestMomentum *handle);
 
 bool wickra_open_interest_momentum_is_ready(struct OpenInterestMomentum *handle);
@@ -10983,6 +11282,22 @@ double wickra_perpetual_premium_index_update(struct PerpetualPremiumIndex *handl
                                              double long_liquidation,
                                              double short_liquidation,
                                              int64_t timestamp);
+
+void wickra_perpetual_premium_index_batch(struct PerpetualPremiumIndex *handle,
+                                          const double *funding_rate,
+                                          const double *mark_price,
+                                          const double *index_price,
+                                          const double *futures_price,
+                                          const double *open_interest,
+                                          const double *long_size,
+                                          const double *short_size,
+                                          const double *taker_buy_volume,
+                                          const double *taker_sell_volume,
+                                          const double *long_liquidation,
+                                          const double *short_liquidation,
+                                          const int64_t *timestamp,
+                                          double *out,
+                                          uintptr_t n);
 
 uintptr_t wickra_perpetual_premium_index_warmup_period(struct PerpetualPremiumIndex *handle);
 
@@ -11010,6 +11325,22 @@ double wickra_taker_buy_sell_ratio_update(struct TakerBuySellRatio *handle,
                                           double short_liquidation,
                                           int64_t timestamp);
 
+void wickra_taker_buy_sell_ratio_batch(struct TakerBuySellRatio *handle,
+                                       const double *funding_rate,
+                                       const double *mark_price,
+                                       const double *index_price,
+                                       const double *futures_price,
+                                       const double *open_interest,
+                                       const double *long_size,
+                                       const double *short_size,
+                                       const double *taker_buy_volume,
+                                       const double *taker_sell_volume,
+                                       const double *long_liquidation,
+                                       const double *short_liquidation,
+                                       const int64_t *timestamp,
+                                       double *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_taker_buy_sell_ratio_warmup_period(struct TakerBuySellRatio *handle);
 
 bool wickra_taker_buy_sell_ratio_is_ready(struct TakerBuySellRatio *handle);
@@ -11036,6 +11367,22 @@ double wickra_term_structure_basis_update(struct TermStructureBasis *handle,
                                           double short_liquidation,
                                           int64_t timestamp);
 
+void wickra_term_structure_basis_batch(struct TermStructureBasis *handle,
+                                       const double *funding_rate,
+                                       const double *mark_price,
+                                       const double *index_price,
+                                       const double *futures_price,
+                                       const double *open_interest,
+                                       const double *long_size,
+                                       const double *short_size,
+                                       const double *taker_buy_volume,
+                                       const double *taker_sell_volume,
+                                       const double *long_liquidation,
+                                       const double *short_liquidation,
+                                       const int64_t *timestamp,
+                                       double *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_term_structure_basis_warmup_period(struct TermStructureBasis *handle);
 
 bool wickra_term_structure_basis_is_ready(struct TermStructureBasis *handle);
@@ -11055,6 +11402,16 @@ double wickra_depth_slope_update(struct DepthSlope *handle,
                                  const double *ask_price,
                                  const double *ask_size,
                                  uintptr_t n_asks);
+
+void wickra_depth_slope_batch(struct DepthSlope *handle,
+                              const double *bid_price,
+                              const double *bid_size,
+                              uintptr_t n_bids,
+                              const double *ask_price,
+                              const double *ask_size,
+                              uintptr_t n_asks,
+                              double *out,
+                              uintptr_t n);
 
 uintptr_t wickra_depth_slope_warmup_period(struct DepthSlope *handle);
 
@@ -11076,6 +11433,16 @@ double wickra_microprice_update(struct Microprice *handle,
                                 const double *ask_size,
                                 uintptr_t n_asks);
 
+void wickra_microprice_batch(struct Microprice *handle,
+                             const double *bid_price,
+                             const double *bid_size,
+                             uintptr_t n_bids,
+                             const double *ask_price,
+                             const double *ask_size,
+                             uintptr_t n_asks,
+                             double *out,
+                             uintptr_t n);
+
 uintptr_t wickra_microprice_warmup_period(struct Microprice *handle);
 
 bool wickra_microprice_is_ready(struct Microprice *handle);
@@ -11095,6 +11462,16 @@ double wickra_order_book_imbalance_full_update(struct OrderBookImbalanceFull *ha
                                                const double *ask_price,
                                                const double *ask_size,
                                                uintptr_t n_asks);
+
+void wickra_order_book_imbalance_full_batch(struct OrderBookImbalanceFull *handle,
+                                            const double *bid_price,
+                                            const double *bid_size,
+                                            uintptr_t n_bids,
+                                            const double *ask_price,
+                                            const double *ask_size,
+                                            uintptr_t n_asks,
+                                            double *out,
+                                            uintptr_t n);
 
 uintptr_t wickra_order_book_imbalance_full_warmup_period(struct OrderBookImbalanceFull *handle);
 
@@ -11116,6 +11493,16 @@ double wickra_order_book_imbalance_top1_update(struct OrderBookImbalanceTop1 *ha
                                                const double *ask_size,
                                                uintptr_t n_asks);
 
+void wickra_order_book_imbalance_top1_batch(struct OrderBookImbalanceTop1 *handle,
+                                            const double *bid_price,
+                                            const double *bid_size,
+                                            uintptr_t n_bids,
+                                            const double *ask_price,
+                                            const double *ask_size,
+                                            uintptr_t n_asks,
+                                            double *out,
+                                            uintptr_t n);
+
 uintptr_t wickra_order_book_imbalance_top1_warmup_period(struct OrderBookImbalanceTop1 *handle);
 
 bool wickra_order_book_imbalance_top1_is_ready(struct OrderBookImbalanceTop1 *handle);
@@ -11135,6 +11522,16 @@ double wickra_order_book_imbalance_top_n_update(struct OrderBookImbalanceTopN *h
                                                 const double *ask_price,
                                                 const double *ask_size,
                                                 uintptr_t n_asks);
+
+void wickra_order_book_imbalance_top_n_batch(struct OrderBookImbalanceTopN *handle,
+                                             const double *bid_price,
+                                             const double *bid_size,
+                                             uintptr_t n_bids,
+                                             const double *ask_price,
+                                             const double *ask_size,
+                                             uintptr_t n_asks,
+                                             double *out,
+                                             uintptr_t n);
 
 uintptr_t wickra_order_book_imbalance_top_n_warmup_period(struct OrderBookImbalanceTopN *handle);
 
@@ -11156,6 +11553,16 @@ double wickra_order_flow_imbalance_update(struct OrderFlowImbalance *handle,
                                           const double *ask_size,
                                           uintptr_t n_asks);
 
+void wickra_order_flow_imbalance_batch(struct OrderFlowImbalance *handle,
+                                       const double *bid_price,
+                                       const double *bid_size,
+                                       uintptr_t n_bids,
+                                       const double *ask_price,
+                                       const double *ask_size,
+                                       uintptr_t n_asks,
+                                       double *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_order_flow_imbalance_warmup_period(struct OrderFlowImbalance *handle);
 
 bool wickra_order_flow_imbalance_is_ready(struct OrderFlowImbalance *handle);
@@ -11175,6 +11582,16 @@ double wickra_quoted_spread_update(struct QuotedSpread *handle,
                                    const double *ask_price,
                                    const double *ask_size,
                                    uintptr_t n_asks);
+
+void wickra_quoted_spread_batch(struct QuotedSpread *handle,
+                                const double *bid_price,
+                                const double *bid_size,
+                                uintptr_t n_bids,
+                                const double *ask_price,
+                                const double *ask_size,
+                                uintptr_t n_asks,
+                                double *out,
+                                uintptr_t n);
 
 uintptr_t wickra_quoted_spread_warmup_period(struct QuotedSpread *handle);
 
@@ -11198,6 +11615,18 @@ double wickra_absolute_breadth_index_update(struct AbsoluteBreadthIndex *handle,
                                             uintptr_t n,
                                             int64_t timestamp);
 
+void wickra_absolute_breadth_index_batch(struct AbsoluteBreadthIndex *handle,
+                                         const double *change,
+                                         const double *volume,
+                                         const bool *new_high,
+                                         const bool *new_low,
+                                         const bool *above_ma,
+                                         const bool *on_buy_signal,
+                                         uintptr_t members,
+                                         const int64_t *timestamp,
+                                         double *out,
+                                         uintptr_t n);
+
 uintptr_t wickra_absolute_breadth_index_warmup_period(struct AbsoluteBreadthIndex *handle);
 
 bool wickra_absolute_breadth_index_is_ready(struct AbsoluteBreadthIndex *handle);
@@ -11219,6 +11648,18 @@ double wickra_ad_volume_line_update(struct AdVolumeLine *handle,
                                     const bool *on_buy_signal,
                                     uintptr_t n,
                                     int64_t timestamp);
+
+void wickra_ad_volume_line_batch(struct AdVolumeLine *handle,
+                                 const double *change,
+                                 const double *volume,
+                                 const bool *new_high,
+                                 const bool *new_low,
+                                 const bool *above_ma,
+                                 const bool *on_buy_signal,
+                                 uintptr_t members,
+                                 const int64_t *timestamp,
+                                 double *out,
+                                 uintptr_t n);
 
 uintptr_t wickra_ad_volume_line_warmup_period(struct AdVolumeLine *handle);
 
@@ -11242,6 +11683,18 @@ double wickra_advance_decline_update(struct AdvanceDecline *handle,
                                      uintptr_t n,
                                      int64_t timestamp);
 
+void wickra_advance_decline_batch(struct AdvanceDecline *handle,
+                                  const double *change,
+                                  const double *volume,
+                                  const bool *new_high,
+                                  const bool *new_low,
+                                  const bool *above_ma,
+                                  const bool *on_buy_signal,
+                                  uintptr_t members,
+                                  const int64_t *timestamp,
+                                  double *out,
+                                  uintptr_t n);
+
 uintptr_t wickra_advance_decline_warmup_period(struct AdvanceDecline *handle);
 
 bool wickra_advance_decline_is_ready(struct AdvanceDecline *handle);
@@ -11263,6 +11716,18 @@ double wickra_advance_decline_ratio_update(struct AdvanceDeclineRatio *handle,
                                            const bool *on_buy_signal,
                                            uintptr_t n,
                                            int64_t timestamp);
+
+void wickra_advance_decline_ratio_batch(struct AdvanceDeclineRatio *handle,
+                                        const double *change,
+                                        const double *volume,
+                                        const bool *new_high,
+                                        const bool *new_low,
+                                        const bool *above_ma,
+                                        const bool *on_buy_signal,
+                                        uintptr_t members,
+                                        const int64_t *timestamp,
+                                        double *out,
+                                        uintptr_t n);
 
 uintptr_t wickra_advance_decline_ratio_warmup_period(struct AdvanceDeclineRatio *handle);
 
@@ -11286,6 +11751,18 @@ double wickra_breadth_thrust_update(struct BreadthThrust *handle,
                                     uintptr_t n,
                                     int64_t timestamp);
 
+void wickra_breadth_thrust_batch(struct BreadthThrust *handle,
+                                 const double *change,
+                                 const double *volume,
+                                 const bool *new_high,
+                                 const bool *new_low,
+                                 const bool *above_ma,
+                                 const bool *on_buy_signal,
+                                 uintptr_t members,
+                                 const int64_t *timestamp,
+                                 double *out,
+                                 uintptr_t n);
+
 uintptr_t wickra_breadth_thrust_warmup_period(struct BreadthThrust *handle);
 
 bool wickra_breadth_thrust_is_ready(struct BreadthThrust *handle);
@@ -11307,6 +11784,18 @@ double wickra_bullish_percent_index_update(struct BullishPercentIndex *handle,
                                            const bool *on_buy_signal,
                                            uintptr_t n,
                                            int64_t timestamp);
+
+void wickra_bullish_percent_index_batch(struct BullishPercentIndex *handle,
+                                        const double *change,
+                                        const double *volume,
+                                        const bool *new_high,
+                                        const bool *new_low,
+                                        const bool *above_ma,
+                                        const bool *on_buy_signal,
+                                        uintptr_t members,
+                                        const int64_t *timestamp,
+                                        double *out,
+                                        uintptr_t n);
 
 uintptr_t wickra_bullish_percent_index_warmup_period(struct BullishPercentIndex *handle);
 
@@ -11330,6 +11819,18 @@ double wickra_cumulative_volume_index_update(struct CumulativeVolumeIndex *handl
                                              uintptr_t n,
                                              int64_t timestamp);
 
+void wickra_cumulative_volume_index_batch(struct CumulativeVolumeIndex *handle,
+                                          const double *change,
+                                          const double *volume,
+                                          const bool *new_high,
+                                          const bool *new_low,
+                                          const bool *above_ma,
+                                          const bool *on_buy_signal,
+                                          uintptr_t members,
+                                          const int64_t *timestamp,
+                                          double *out,
+                                          uintptr_t n);
+
 uintptr_t wickra_cumulative_volume_index_warmup_period(struct CumulativeVolumeIndex *handle);
 
 bool wickra_cumulative_volume_index_is_ready(struct CumulativeVolumeIndex *handle);
@@ -11351,6 +11852,18 @@ double wickra_high_low_index_update(struct HighLowIndex *handle,
                                     const bool *on_buy_signal,
                                     uintptr_t n,
                                     int64_t timestamp);
+
+void wickra_high_low_index_batch(struct HighLowIndex *handle,
+                                 const double *change,
+                                 const double *volume,
+                                 const bool *new_high,
+                                 const bool *new_low,
+                                 const bool *above_ma,
+                                 const bool *on_buy_signal,
+                                 uintptr_t members,
+                                 const int64_t *timestamp,
+                                 double *out,
+                                 uintptr_t n);
 
 uintptr_t wickra_high_low_index_warmup_period(struct HighLowIndex *handle);
 
@@ -11374,6 +11887,18 @@ double wickra_mc_clellan_oscillator_update(struct McClellanOscillator *handle,
                                            uintptr_t n,
                                            int64_t timestamp);
 
+void wickra_mc_clellan_oscillator_batch(struct McClellanOscillator *handle,
+                                        const double *change,
+                                        const double *volume,
+                                        const bool *new_high,
+                                        const bool *new_low,
+                                        const bool *above_ma,
+                                        const bool *on_buy_signal,
+                                        uintptr_t members,
+                                        const int64_t *timestamp,
+                                        double *out,
+                                        uintptr_t n);
+
 uintptr_t wickra_mc_clellan_oscillator_warmup_period(struct McClellanOscillator *handle);
 
 bool wickra_mc_clellan_oscillator_is_ready(struct McClellanOscillator *handle);
@@ -11395,6 +11920,18 @@ double wickra_mc_clellan_summation_index_update(struct McClellanSummationIndex *
                                                 const bool *on_buy_signal,
                                                 uintptr_t n,
                                                 int64_t timestamp);
+
+void wickra_mc_clellan_summation_index_batch(struct McClellanSummationIndex *handle,
+                                             const double *change,
+                                             const double *volume,
+                                             const bool *new_high,
+                                             const bool *new_low,
+                                             const bool *above_ma,
+                                             const bool *on_buy_signal,
+                                             uintptr_t members,
+                                             const int64_t *timestamp,
+                                             double *out,
+                                             uintptr_t n);
 
 uintptr_t wickra_mc_clellan_summation_index_warmup_period(struct McClellanSummationIndex *handle);
 
@@ -11418,6 +11955,18 @@ double wickra_new_highs_new_lows_update(struct NewHighsNewLows *handle,
                                         uintptr_t n,
                                         int64_t timestamp);
 
+void wickra_new_highs_new_lows_batch(struct NewHighsNewLows *handle,
+                                     const double *change,
+                                     const double *volume,
+                                     const bool *new_high,
+                                     const bool *new_low,
+                                     const bool *above_ma,
+                                     const bool *on_buy_signal,
+                                     uintptr_t members,
+                                     const int64_t *timestamp,
+                                     double *out,
+                                     uintptr_t n);
+
 uintptr_t wickra_new_highs_new_lows_warmup_period(struct NewHighsNewLows *handle);
 
 bool wickra_new_highs_new_lows_is_ready(struct NewHighsNewLows *handle);
@@ -11439,6 +11988,18 @@ double wickra_percent_above_ma_update(struct PercentAboveMa *handle,
                                       const bool *on_buy_signal,
                                       uintptr_t n,
                                       int64_t timestamp);
+
+void wickra_percent_above_ma_batch(struct PercentAboveMa *handle,
+                                   const double *change,
+                                   const double *volume,
+                                   const bool *new_high,
+                                   const bool *new_low,
+                                   const bool *above_ma,
+                                   const bool *on_buy_signal,
+                                   uintptr_t members,
+                                   const int64_t *timestamp,
+                                   double *out,
+                                   uintptr_t n);
 
 uintptr_t wickra_percent_above_ma_warmup_period(struct PercentAboveMa *handle);
 
@@ -11462,6 +12023,18 @@ double wickra_tick_index_update(struct TickIndex *handle,
                                 uintptr_t n,
                                 int64_t timestamp);
 
+void wickra_tick_index_batch(struct TickIndex *handle,
+                             const double *change,
+                             const double *volume,
+                             const bool *new_high,
+                             const bool *new_low,
+                             const bool *above_ma,
+                             const bool *on_buy_signal,
+                             uintptr_t members,
+                             const int64_t *timestamp,
+                             double *out,
+                             uintptr_t n);
+
 uintptr_t wickra_tick_index_warmup_period(struct TickIndex *handle);
 
 bool wickra_tick_index_is_ready(struct TickIndex *handle);
@@ -11483,6 +12056,18 @@ double wickra_trin_update(struct Trin *handle,
                           const bool *on_buy_signal,
                           uintptr_t n,
                           int64_t timestamp);
+
+void wickra_trin_batch(struct Trin *handle,
+                       const double *change,
+                       const double *volume,
+                       const bool *new_high,
+                       const bool *new_low,
+                       const bool *above_ma,
+                       const bool *on_buy_signal,
+                       uintptr_t members,
+                       const int64_t *timestamp,
+                       double *out,
+                       uintptr_t n);
 
 uintptr_t wickra_trin_warmup_period(struct Trin *handle);
 
@@ -11506,6 +12091,18 @@ double wickra_up_down_volume_ratio_update(struct UpDownVolumeRatio *handle,
                                           uintptr_t n,
                                           int64_t timestamp);
 
+void wickra_up_down_volume_ratio_batch(struct UpDownVolumeRatio *handle,
+                                       const double *change,
+                                       const double *volume,
+                                       const bool *new_high,
+                                       const bool *new_low,
+                                       const bool *above_ma,
+                                       const bool *on_buy_signal,
+                                       uintptr_t members,
+                                       const int64_t *timestamp,
+                                       double *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_up_down_volume_ratio_warmup_period(struct UpDownVolumeRatio *handle);
 
 bool wickra_up_down_volume_ratio_is_ready(struct UpDownVolumeRatio *handle);
@@ -11527,6 +12124,16 @@ bool wickra_acceleration_bands_update(struct AccelerationBands *handle,
                                       int64_t timestamp,
                                       struct WickraAccelerationBandsOutput *out);
 
+void wickra_acceleration_bands_batch(struct AccelerationBands *handle,
+                                     const double *open,
+                                     const double *high,
+                                     const double *low,
+                                     const double *close,
+                                     const double *volume,
+                                     const int64_t *timestamp,
+                                     struct WickraAccelerationBandsOutput *out,
+                                     uintptr_t n);
+
 uintptr_t wickra_acceleration_bands_warmup_period(struct AccelerationBands *handle);
 
 bool wickra_acceleration_bands_is_ready(struct AccelerationBands *handle);
@@ -11547,6 +12154,16 @@ bool wickra_adx_update(struct Adx *handle,
                        double volume,
                        int64_t timestamp,
                        struct WickraAdxOutput *out);
+
+void wickra_adx_batch(struct Adx *handle,
+                      const double *open,
+                      const double *high,
+                      const double *low,
+                      const double *close,
+                      const double *volume,
+                      const int64_t *timestamp,
+                      struct WickraAdxOutput *out,
+                      uintptr_t n);
 
 uintptr_t wickra_adx_warmup_period(struct Adx *handle);
 
@@ -11571,6 +12188,16 @@ bool wickra_alligator_update(struct Alligator *handle,
                              int64_t timestamp,
                              struct WickraAlligatorOutput *out);
 
+void wickra_alligator_batch(struct Alligator *handle,
+                            const double *open,
+                            const double *high,
+                            const double *low,
+                            const double *close,
+                            const double *volume,
+                            const int64_t *timestamp,
+                            struct WickraAlligatorOutput *out,
+                            uintptr_t n);
+
 uintptr_t wickra_alligator_warmup_period(struct Alligator *handle);
 
 bool wickra_alligator_is_ready(struct Alligator *handle);
@@ -11591,6 +12218,16 @@ bool wickra_andrews_pitchfork_update(struct AndrewsPitchfork *handle,
                                      double volume,
                                      int64_t timestamp,
                                      struct WickraAndrewsPitchforkOutput *out);
+
+void wickra_andrews_pitchfork_batch(struct AndrewsPitchfork *handle,
+                                    const double *open,
+                                    const double *high,
+                                    const double *low,
+                                    const double *close,
+                                    const double *volume,
+                                    const int64_t *timestamp,
+                                    struct WickraAndrewsPitchforkOutput *out,
+                                    uintptr_t n);
 
 uintptr_t wickra_andrews_pitchfork_warmup_period(struct AndrewsPitchfork *handle);
 
@@ -11613,6 +12250,16 @@ bool wickra_aroon_update(struct Aroon *handle,
                          int64_t timestamp,
                          struct WickraAroonOutput *out);
 
+void wickra_aroon_batch(struct Aroon *handle,
+                        const double *open,
+                        const double *high,
+                        const double *low,
+                        const double *close,
+                        const double *volume,
+                        const int64_t *timestamp,
+                        struct WickraAroonOutput *out,
+                        uintptr_t n);
+
 uintptr_t wickra_aroon_warmup_period(struct Aroon *handle);
 
 bool wickra_aroon_is_ready(struct Aroon *handle);
@@ -11633,6 +12280,16 @@ bool wickra_atr_bands_update(struct AtrBands *handle,
                              double volume,
                              int64_t timestamp,
                              struct WickraAtrBandsOutput *out);
+
+void wickra_atr_bands_batch(struct AtrBands *handle,
+                            const double *open,
+                            const double *high,
+                            const double *low,
+                            const double *close,
+                            const double *volume,
+                            const int64_t *timestamp,
+                            struct WickraAtrBandsOutput *out,
+                            uintptr_t n);
 
 uintptr_t wickra_atr_bands_warmup_period(struct AtrBands *handle);
 
@@ -11657,6 +12314,16 @@ bool wickra_atr_ratchet_update(struct AtrRatchet *handle,
                                int64_t timestamp,
                                struct WickraAtrRatchetOutput *out);
 
+void wickra_atr_ratchet_batch(struct AtrRatchet *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraAtrRatchetOutput *out,
+                              uintptr_t n);
+
 uintptr_t wickra_atr_ratchet_warmup_period(struct AtrRatchet *handle);
 
 bool wickra_atr_ratchet_is_ready(struct AtrRatchet *handle);
@@ -11678,6 +12345,16 @@ bool wickra_auto_fib_update(struct AutoFib *handle,
                             int64_t timestamp,
                             struct WickraAutoFibOutput *out);
 
+void wickra_auto_fib_batch(struct AutoFib *handle,
+                           const double *open,
+                           const double *high,
+                           const double *low,
+                           const double *close,
+                           const double *volume,
+                           const int64_t *timestamp,
+                           struct WickraAutoFibOutput *out,
+                           uintptr_t n);
+
 uintptr_t wickra_auto_fib_warmup_period(struct AutoFib *handle);
 
 bool wickra_auto_fib_is_ready(struct AutoFib *handle);
@@ -11694,6 +12371,11 @@ bool wickra_bollinger_bands_update(struct BollingerBands *handle,
                                    double value,
                                    struct WickraBollingerOutput *out);
 
+void wickra_bollinger_bands_batch(struct BollingerBands *handle,
+                                  const double *input,
+                                  struct WickraBollingerOutput *out,
+                                  uintptr_t n);
+
 uintptr_t wickra_bollinger_bands_warmup_period(struct BollingerBands *handle);
 
 bool wickra_bollinger_bands_is_ready(struct BollingerBands *handle);
@@ -11709,6 +12391,11 @@ struct BomarBands *wickra_bomar_bands_new(uintptr_t period, double coverage);
 bool wickra_bomar_bands_update(struct BomarBands *handle,
                                double value,
                                struct WickraBomarBandsOutput *out);
+
+void wickra_bomar_bands_batch(struct BomarBands *handle,
+                              const double *input,
+                              struct WickraBomarBandsOutput *out,
+                              uintptr_t n);
 
 uintptr_t wickra_bomar_bands_warmup_period(struct BomarBands *handle);
 
@@ -11731,6 +12418,16 @@ bool wickra_camarilla_update(struct Camarilla *handle,
                              int64_t timestamp,
                              struct WickraCamarillaPivotsOutput *out);
 
+void wickra_camarilla_batch(struct Camarilla *handle,
+                            const double *open,
+                            const double *high,
+                            const double *low,
+                            const double *close,
+                            const double *volume,
+                            const int64_t *timestamp,
+                            struct WickraCamarillaPivotsOutput *out,
+                            uintptr_t n);
+
 uintptr_t wickra_camarilla_warmup_period(struct Camarilla *handle);
 
 bool wickra_camarilla_is_ready(struct Camarilla *handle);
@@ -11752,6 +12449,16 @@ bool wickra_candle_volume_update(struct CandleVolume *handle,
                                  int64_t timestamp,
                                  struct WickraCandleVolumeOutput *out);
 
+void wickra_candle_volume_batch(struct CandleVolume *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraCandleVolumeOutput *out,
+                                uintptr_t n);
+
 uintptr_t wickra_candle_volume_warmup_period(struct CandleVolume *handle);
 
 bool wickra_candle_volume_is_ready(struct CandleVolume *handle);
@@ -11772,6 +12479,16 @@ bool wickra_central_pivot_range_update(struct CentralPivotRange *handle,
                                        double volume,
                                        int64_t timestamp,
                                        struct WickraCentralPivotRangeOutput *out);
+
+void wickra_central_pivot_range_batch(struct CentralPivotRange *handle,
+                                      const double *open,
+                                      const double *high,
+                                      const double *low,
+                                      const double *close,
+                                      const double *volume,
+                                      const int64_t *timestamp,
+                                      struct WickraCentralPivotRangeOutput *out,
+                                      uintptr_t n);
 
 uintptr_t wickra_central_pivot_range_warmup_period(struct CentralPivotRange *handle);
 
@@ -11796,6 +12513,16 @@ bool wickra_chande_kroll_stop_update(struct ChandeKrollStop *handle,
                                      int64_t timestamp,
                                      struct WickraChandeKrollStopOutput *out);
 
+void wickra_chande_kroll_stop_batch(struct ChandeKrollStop *handle,
+                                    const double *open,
+                                    const double *high,
+                                    const double *low,
+                                    const double *close,
+                                    const double *volume,
+                                    const int64_t *timestamp,
+                                    struct WickraChandeKrollStopOutput *out,
+                                    uintptr_t n);
+
 uintptr_t wickra_chande_kroll_stop_warmup_period(struct ChandeKrollStop *handle);
 
 bool wickra_chande_kroll_stop_is_ready(struct ChandeKrollStop *handle);
@@ -11816,6 +12543,16 @@ bool wickra_chandelier_exit_update(struct ChandelierExit *handle,
                                    double volume,
                                    int64_t timestamp,
                                    struct WickraChandelierExitOutput *out);
+
+void wickra_chandelier_exit_batch(struct ChandelierExit *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  struct WickraChandelierExitOutput *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_chandelier_exit_warmup_period(struct ChandelierExit *handle);
 
@@ -11838,6 +12575,16 @@ bool wickra_classic_pivots_update(struct ClassicPivots *handle,
                                   int64_t timestamp,
                                   struct WickraClassicPivotsOutput *out);
 
+void wickra_classic_pivots_batch(struct ClassicPivots *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 struct WickraClassicPivotsOutput *out,
+                                 uintptr_t n);
+
 uintptr_t wickra_classic_pivots_warmup_period(struct ClassicPivots *handle);
 
 bool wickra_classic_pivots_is_ready(struct ClassicPivots *handle);
@@ -11854,6 +12601,12 @@ bool wickra_cointegration_update(struct Cointegration *handle,
                                  double x,
                                  double y,
                                  struct WickraCointegrationOutput *out);
+
+void wickra_cointegration_batch(struct Cointegration *handle,
+                                const double *x,
+                                const double *y,
+                                struct WickraCointegrationOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_cointegration_warmup_period(struct Cointegration *handle);
 
@@ -11878,6 +12631,16 @@ bool wickra_composite_profile_update(struct CompositeProfile *handle,
                                      int64_t timestamp,
                                      struct WickraCompositeProfileOutput *out);
 
+void wickra_composite_profile_batch(struct CompositeProfile *handle,
+                                    const double *open,
+                                    const double *high,
+                                    const double *low,
+                                    const double *close,
+                                    const double *volume,
+                                    const int64_t *timestamp,
+                                    struct WickraCompositeProfileOutput *out,
+                                    uintptr_t n);
+
 uintptr_t wickra_composite_profile_warmup_period(struct CompositeProfile *handle);
 
 bool wickra_composite_profile_is_ready(struct CompositeProfile *handle);
@@ -11898,6 +12661,16 @@ bool wickra_demark_pivots_update(struct DemarkPivots *handle,
                                  double volume,
                                  int64_t timestamp,
                                  struct WickraDemarkPivotsOutput *out);
+
+void wickra_demark_pivots_batch(struct DemarkPivots *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraDemarkPivotsOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_demark_pivots_warmup_period(struct DemarkPivots *handle);
 
@@ -11920,6 +12693,16 @@ bool wickra_donchian_update(struct Donchian *handle,
                             int64_t timestamp,
                             struct WickraDonchianOutput *out);
 
+void wickra_donchian_batch(struct Donchian *handle,
+                           const double *open,
+                           const double *high,
+                           const double *low,
+                           const double *close,
+                           const double *volume,
+                           const int64_t *timestamp,
+                           struct WickraDonchianOutput *out,
+                           uintptr_t n);
+
 uintptr_t wickra_donchian_warmup_period(struct Donchian *handle);
 
 bool wickra_donchian_is_ready(struct Donchian *handle);
@@ -11941,6 +12724,16 @@ bool wickra_donchian_stop_update(struct DonchianStop *handle,
                                  int64_t timestamp,
                                  struct WickraDonchianStopOutput *out);
 
+void wickra_donchian_stop_batch(struct DonchianStop *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraDonchianStopOutput *out,
+                                uintptr_t n);
+
 uintptr_t wickra_donchian_stop_warmup_period(struct DonchianStop *handle);
 
 bool wickra_donchian_stop_is_ready(struct DonchianStop *handle);
@@ -11958,6 +12751,11 @@ struct DoubleBollinger *wickra_double_bollinger_new(uintptr_t period,
 bool wickra_double_bollinger_update(struct DoubleBollinger *handle,
                                     double value,
                                     struct WickraDoubleBollingerOutput *out);
+
+void wickra_double_bollinger_batch(struct DoubleBollinger *handle,
+                                   const double *input,
+                                   struct WickraDoubleBollingerOutput *out,
+                                   uintptr_t n);
 
 uintptr_t wickra_double_bollinger_warmup_period(struct DoubleBollinger *handle);
 
@@ -11980,6 +12778,16 @@ bool wickra_elder_ray_update(struct ElderRay *handle,
                              int64_t timestamp,
                              struct WickraElderRayOutput *out);
 
+void wickra_elder_ray_batch(struct ElderRay *handle,
+                            const double *open,
+                            const double *high,
+                            const double *low,
+                            const double *close,
+                            const double *volume,
+                            const int64_t *timestamp,
+                            struct WickraElderRayOutput *out,
+                            uintptr_t n);
+
 uintptr_t wickra_elder_ray_warmup_period(struct ElderRay *handle);
 
 bool wickra_elder_ray_is_ready(struct ElderRay *handle);
@@ -12000,6 +12808,16 @@ bool wickra_elder_safe_zone_update(struct ElderSafeZone *handle,
                                    double volume,
                                    int64_t timestamp,
                                    struct WickraElderSafeZoneOutput *out);
+
+void wickra_elder_safe_zone_batch(struct ElderSafeZone *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  struct WickraElderSafeZoneOutput *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_elder_safe_zone_warmup_period(struct ElderSafeZone *handle);
 
@@ -12022,6 +12840,16 @@ bool wickra_equivolume_update(struct Equivolume *handle,
                               int64_t timestamp,
                               struct WickraEquivolumeOutput *out);
 
+void wickra_equivolume_batch(struct Equivolume *handle,
+                             const double *open,
+                             const double *high,
+                             const double *low,
+                             const double *close,
+                             const double *volume,
+                             const int64_t *timestamp,
+                             struct WickraEquivolumeOutput *out,
+                             uintptr_t n);
+
 uintptr_t wickra_equivolume_warmup_period(struct Equivolume *handle);
 
 bool wickra_equivolume_is_ready(struct Equivolume *handle);
@@ -12042,6 +12870,16 @@ bool wickra_fib_arcs_update(struct FibArcs *handle,
                             double volume,
                             int64_t timestamp,
                             struct WickraFibArcsOutput *out);
+
+void wickra_fib_arcs_batch(struct FibArcs *handle,
+                           const double *open,
+                           const double *high,
+                           const double *low,
+                           const double *close,
+                           const double *volume,
+                           const int64_t *timestamp,
+                           struct WickraFibArcsOutput *out,
+                           uintptr_t n);
 
 uintptr_t wickra_fib_arcs_warmup_period(struct FibArcs *handle);
 
@@ -12064,6 +12902,16 @@ bool wickra_fib_channel_update(struct FibChannel *handle,
                                int64_t timestamp,
                                struct WickraFibChannelOutput *out);
 
+void wickra_fib_channel_batch(struct FibChannel *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraFibChannelOutput *out,
+                              uintptr_t n);
+
 uintptr_t wickra_fib_channel_warmup_period(struct FibChannel *handle);
 
 bool wickra_fib_channel_is_ready(struct FibChannel *handle);
@@ -12084,6 +12932,16 @@ bool wickra_fib_confluence_update(struct FibConfluence *handle,
                                   double volume,
                                   int64_t timestamp,
                                   struct WickraFibConfluenceOutput *out);
+
+void wickra_fib_confluence_batch(struct FibConfluence *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 struct WickraFibConfluenceOutput *out,
+                                 uintptr_t n);
 
 uintptr_t wickra_fib_confluence_warmup_period(struct FibConfluence *handle);
 
@@ -12106,6 +12964,16 @@ bool wickra_fib_extension_update(struct FibExtension *handle,
                                  int64_t timestamp,
                                  struct WickraFibExtensionOutput *out);
 
+void wickra_fib_extension_batch(struct FibExtension *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraFibExtensionOutput *out,
+                                uintptr_t n);
+
 uintptr_t wickra_fib_extension_warmup_period(struct FibExtension *handle);
 
 bool wickra_fib_extension_is_ready(struct FibExtension *handle);
@@ -12126,6 +12994,16 @@ bool wickra_fib_fan_update(struct FibFan *handle,
                            double volume,
                            int64_t timestamp,
                            struct WickraFibFanOutput *out);
+
+void wickra_fib_fan_batch(struct FibFan *handle,
+                          const double *open,
+                          const double *high,
+                          const double *low,
+                          const double *close,
+                          const double *volume,
+                          const int64_t *timestamp,
+                          struct WickraFibFanOutput *out,
+                          uintptr_t n);
 
 uintptr_t wickra_fib_fan_warmup_period(struct FibFan *handle);
 
@@ -12148,6 +13026,16 @@ bool wickra_fib_projection_update(struct FibProjection *handle,
                                   int64_t timestamp,
                                   struct WickraFibProjectionOutput *out);
 
+void wickra_fib_projection_batch(struct FibProjection *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 struct WickraFibProjectionOutput *out,
+                                 uintptr_t n);
+
 uintptr_t wickra_fib_projection_warmup_period(struct FibProjection *handle);
 
 bool wickra_fib_projection_is_ready(struct FibProjection *handle);
@@ -12168,6 +13056,16 @@ bool wickra_fib_retracement_update(struct FibRetracement *handle,
                                    double volume,
                                    int64_t timestamp,
                                    struct WickraFibRetracementOutput *out);
+
+void wickra_fib_retracement_batch(struct FibRetracement *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  struct WickraFibRetracementOutput *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_fib_retracement_warmup_period(struct FibRetracement *handle);
 
@@ -12190,6 +13088,16 @@ bool wickra_fib_time_zones_update(struct FibTimeZones *handle,
                                   int64_t timestamp,
                                   struct WickraFibTimeZonesOutput *out);
 
+void wickra_fib_time_zones_batch(struct FibTimeZones *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 struct WickraFibTimeZonesOutput *out,
+                                 uintptr_t n);
+
 uintptr_t wickra_fib_time_zones_warmup_period(struct FibTimeZones *handle);
 
 bool wickra_fib_time_zones_is_ready(struct FibTimeZones *handle);
@@ -12211,6 +13119,16 @@ bool wickra_fibonacci_pivots_update(struct FibonacciPivots *handle,
                                     int64_t timestamp,
                                     struct WickraFibonacciPivotsOutput *out);
 
+void wickra_fibonacci_pivots_batch(struct FibonacciPivots *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   struct WickraFibonacciPivotsOutput *out,
+                                   uintptr_t n);
+
 uintptr_t wickra_fibonacci_pivots_warmup_period(struct FibonacciPivots *handle);
 
 bool wickra_fibonacci_pivots_is_ready(struct FibonacciPivots *handle);
@@ -12231,6 +13149,16 @@ bool wickra_fractal_chaos_bands_update(struct FractalChaosBands *handle,
                                        double volume,
                                        int64_t timestamp,
                                        struct WickraFractalChaosBandsOutput *out);
+
+void wickra_fractal_chaos_bands_batch(struct FractalChaosBands *handle,
+                                      const double *open,
+                                      const double *high,
+                                      const double *low,
+                                      const double *close,
+                                      const double *volume,
+                                      const int64_t *timestamp,
+                                      struct WickraFractalChaosBandsOutput *out,
+                                      uintptr_t n);
 
 uintptr_t wickra_fractal_chaos_bands_warmup_period(struct FractalChaosBands *handle);
 
@@ -12255,6 +13183,16 @@ bool wickra_gator_oscillator_update(struct GatorOscillator *handle,
                                     int64_t timestamp,
                                     struct WickraGatorOscillatorOutput *out);
 
+void wickra_gator_oscillator_batch(struct GatorOscillator *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   struct WickraGatorOscillatorOutput *out,
+                                   uintptr_t n);
+
 uintptr_t wickra_gator_oscillator_warmup_period(struct GatorOscillator *handle);
 
 bool wickra_gator_oscillator_is_ready(struct GatorOscillator *handle);
@@ -12275,6 +13213,16 @@ bool wickra_golden_pocket_update(struct GoldenPocket *handle,
                                  double volume,
                                  int64_t timestamp,
                                  struct WickraGoldenPocketOutput *out);
+
+void wickra_golden_pocket_batch(struct GoldenPocket *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraGoldenPocketOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_golden_pocket_warmup_period(struct GoldenPocket *handle);
 
@@ -12297,6 +13245,16 @@ bool wickra_heikin_ashi_update(struct HeikinAshi *handle,
                                int64_t timestamp,
                                struct WickraHeikinAshiOutput *out);
 
+void wickra_heikin_ashi_batch(struct HeikinAshi *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraHeikinAshiOutput *out,
+                              uintptr_t n);
+
 uintptr_t wickra_heikin_ashi_warmup_period(struct HeikinAshi *handle);
 
 bool wickra_heikin_ashi_is_ready(struct HeikinAshi *handle);
@@ -12318,6 +13276,16 @@ bool wickra_high_low_volume_nodes_update(struct HighLowVolumeNodes *handle,
                                          int64_t timestamp,
                                          struct WickraHighLowVolumeNodesOutput *out);
 
+void wickra_high_low_volume_nodes_batch(struct HighLowVolumeNodes *handle,
+                                        const double *open,
+                                        const double *high,
+                                        const double *low,
+                                        const double *close,
+                                        const double *volume,
+                                        const int64_t *timestamp,
+                                        struct WickraHighLowVolumeNodesOutput *out,
+                                        uintptr_t n);
+
 uintptr_t wickra_high_low_volume_nodes_warmup_period(struct HighLowVolumeNodes *handle);
 
 bool wickra_high_low_volume_nodes_is_ready(struct HighLowVolumeNodes *handle);
@@ -12333,6 +13301,11 @@ struct HtPhasor *wickra_ht_phasor_new(void);
 bool wickra_ht_phasor_update(struct HtPhasor *handle,
                              double value,
                              struct WickraHtPhasorOutput *out);
+
+void wickra_ht_phasor_batch(struct HtPhasor *handle,
+                            const double *input,
+                            struct WickraHtPhasorOutput *out,
+                            uintptr_t n);
 
 uintptr_t wickra_ht_phasor_warmup_period(struct HtPhasor *handle);
 
@@ -12354,6 +13327,16 @@ bool wickra_hurst_channel_update(struct HurstChannel *handle,
                                  double volume,
                                  int64_t timestamp,
                                  struct WickraHurstChannelOutput *out);
+
+void wickra_hurst_channel_batch(struct HurstChannel *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraHurstChannelOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_hurst_channel_warmup_period(struct HurstChannel *handle);
 
@@ -12379,6 +13362,16 @@ bool wickra_ichimoku_update(struct Ichimoku *handle,
                             int64_t timestamp,
                             struct WickraIchimokuOutput *out);
 
+void wickra_ichimoku_batch(struct Ichimoku *handle,
+                           const double *open,
+                           const double *high,
+                           const double *low,
+                           const double *close,
+                           const double *volume,
+                           const int64_t *timestamp,
+                           struct WickraIchimokuOutput *out,
+                           uintptr_t n);
+
 uintptr_t wickra_ichimoku_warmup_period(struct Ichimoku *handle);
 
 bool wickra_ichimoku_is_ready(struct Ichimoku *handle);
@@ -12400,6 +13393,16 @@ bool wickra_initial_balance_update(struct InitialBalance *handle,
                                    int64_t timestamp,
                                    struct WickraInitialBalanceOutput *out);
 
+void wickra_initial_balance_batch(struct InitialBalance *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  struct WickraInitialBalanceOutput *out,
+                                  uintptr_t n);
+
 uintptr_t wickra_initial_balance_warmup_period(struct InitialBalance *handle);
 
 bool wickra_initial_balance_is_ready(struct InitialBalance *handle);
@@ -12416,6 +13419,12 @@ bool wickra_kalman_hedge_ratio_update(struct KalmanHedgeRatio *handle,
                                       double x,
                                       double y,
                                       struct WickraKalmanHedgeRatioOutput *out);
+
+void wickra_kalman_hedge_ratio_batch(struct KalmanHedgeRatio *handle,
+                                     const double *x,
+                                     const double *y,
+                                     struct WickraKalmanHedgeRatioOutput *out,
+                                     uintptr_t n);
 
 uintptr_t wickra_kalman_hedge_ratio_warmup_period(struct KalmanHedgeRatio *handle);
 
@@ -12437,6 +13446,16 @@ bool wickra_kase_dev_stop_update(struct KaseDevStop *handle,
                                  double volume,
                                  int64_t timestamp,
                                  struct WickraKaseDevStopOutput *out);
+
+void wickra_kase_dev_stop_batch(struct KaseDevStop *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraKaseDevStopOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_kase_dev_stop_warmup_period(struct KaseDevStop *handle);
 
@@ -12460,6 +13479,16 @@ bool wickra_kase_permission_stochastic_update(struct KasePermissionStochastic *h
                                               int64_t timestamp,
                                               struct WickraKasePermissionStochasticOutput *out);
 
+void wickra_kase_permission_stochastic_batch(struct KasePermissionStochastic *handle,
+                                             const double *open,
+                                             const double *high,
+                                             const double *low,
+                                             const double *close,
+                                             const double *volume,
+                                             const int64_t *timestamp,
+                                             struct WickraKasePermissionStochasticOutput *out,
+                                             uintptr_t n);
+
 uintptr_t wickra_kase_permission_stochastic_warmup_period(struct KasePermissionStochastic *handle);
 
 bool wickra_kase_permission_stochastic_is_ready(struct KasePermissionStochastic *handle);
@@ -12480,6 +13509,16 @@ bool wickra_keltner_update(struct Keltner *handle,
                            double volume,
                            int64_t timestamp,
                            struct WickraKeltnerOutput *out);
+
+void wickra_keltner_batch(struct Keltner *handle,
+                          const double *open,
+                          const double *high,
+                          const double *low,
+                          const double *close,
+                          const double *volume,
+                          const int64_t *timestamp,
+                          struct WickraKeltnerOutput *out,
+                          uintptr_t n);
 
 uintptr_t wickra_keltner_warmup_period(struct Keltner *handle);
 
@@ -12503,6 +13542,11 @@ struct Kst *wickra_kst_new(uintptr_t roc1,
 
 bool wickra_kst_update(struct Kst *handle, double value, struct WickraKstOutput *out);
 
+void wickra_kst_batch(struct Kst *handle,
+                      const double *input,
+                      struct WickraKstOutput *out,
+                      uintptr_t n);
+
 uintptr_t wickra_kst_warmup_period(struct Kst *handle);
 
 bool wickra_kst_is_ready(struct Kst *handle);
@@ -12521,6 +13565,12 @@ bool wickra_lead_lag_cross_correlation_update(struct LeadLagCrossCorrelation *ha
                                               double y,
                                               struct WickraLeadLagCrossCorrelationOutput *out);
 
+void wickra_lead_lag_cross_correlation_batch(struct LeadLagCrossCorrelation *handle,
+                                             const double *x,
+                                             const double *y,
+                                             struct WickraLeadLagCrossCorrelationOutput *out,
+                                             uintptr_t n);
+
 uintptr_t wickra_lead_lag_cross_correlation_warmup_period(struct LeadLagCrossCorrelation *handle);
 
 bool wickra_lead_lag_cross_correlation_is_ready(struct LeadLagCrossCorrelation *handle);
@@ -12536,6 +13586,11 @@ struct LinRegChannel *wickra_lin_reg_channel_new(uintptr_t period, double multip
 bool wickra_lin_reg_channel_update(struct LinRegChannel *handle,
                                    double value,
                                    struct WickraLinRegChannelOutput *out);
+
+void wickra_lin_reg_channel_batch(struct LinRegChannel *handle,
+                                  const double *input,
+                                  struct WickraLinRegChannelOutput *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_lin_reg_channel_warmup_period(struct LinRegChannel *handle);
 
@@ -12564,6 +13619,22 @@ bool wickra_liquidation_features_update(struct LiquidationFeatures *handle,
                                         int64_t timestamp,
                                         struct WickraLiquidationFeaturesOutput *out);
 
+void wickra_liquidation_features_batch(struct LiquidationFeatures *handle,
+                                       const double *funding_rate,
+                                       const double *mark_price,
+                                       const double *index_price,
+                                       const double *futures_price,
+                                       const double *open_interest,
+                                       const double *long_size,
+                                       const double *short_size,
+                                       const double *taker_buy_volume,
+                                       const double *taker_sell_volume,
+                                       const double *long_liquidation,
+                                       const double *short_liquidation,
+                                       const int64_t *timestamp,
+                                       struct WickraLiquidationFeaturesOutput *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_liquidation_features_warmup_period(struct LiquidationFeatures *handle);
 
 bool wickra_liquidation_features_is_ready(struct LiquidationFeatures *handle);
@@ -12579,6 +13650,11 @@ struct MaEnvelope *wickra_ma_envelope_new(uintptr_t period, double percent);
 bool wickra_ma_envelope_update(struct MaEnvelope *handle,
                                double value,
                                struct WickraMaEnvelopeOutput *out);
+
+void wickra_ma_envelope_batch(struct MaEnvelope *handle,
+                              const double *input,
+                              struct WickraMaEnvelopeOutput *out,
+                              uintptr_t n);
 
 uintptr_t wickra_ma_envelope_warmup_period(struct MaEnvelope *handle);
 
@@ -12596,6 +13672,11 @@ bool wickra_macd_indicator_update(struct MacdIndicator *handle,
                                   double value,
                                   struct WickraMacdOutput *out);
 
+void wickra_macd_indicator_batch(struct MacdIndicator *handle,
+                                 const double *input,
+                                 struct WickraMacdOutput *out,
+                                 uintptr_t n);
+
 uintptr_t wickra_macd_indicator_warmup_period(struct MacdIndicator *handle);
 
 bool wickra_macd_indicator_is_ready(struct MacdIndicator *handle);
@@ -12610,6 +13691,11 @@ struct MacdFix *wickra_macd_fix_new(uintptr_t signal);
 
 bool wickra_macd_fix_update(struct MacdFix *handle, double value, struct WickraMacdOutput *out);
 
+void wickra_macd_fix_batch(struct MacdFix *handle,
+                           const double *input,
+                           struct WickraMacdOutput *out,
+                           uintptr_t n);
+
 uintptr_t wickra_macd_fix_warmup_period(struct MacdFix *handle);
 
 bool wickra_macd_fix_is_ready(struct MacdFix *handle);
@@ -12623,6 +13709,11 @@ void wickra_macd_fix_free(struct MacdFix *handle);
 struct Mama *wickra_mama_new(double fast_limit, double slow_limit);
 
 bool wickra_mama_update(struct Mama *handle, double value, struct WickraMamaOutput *out);
+
+void wickra_mama_batch(struct Mama *handle,
+                       const double *input,
+                       struct WickraMamaOutput *out,
+                       uintptr_t n);
 
 uintptr_t wickra_mama_warmup_period(struct Mama *handle);
 
@@ -12639,6 +13730,11 @@ struct MedianChannel *wickra_median_channel_new(uintptr_t period, double multipl
 bool wickra_median_channel_update(struct MedianChannel *handle,
                                   double value,
                                   struct WickraMedianChannelOutput *out);
+
+void wickra_median_channel_batch(struct MedianChannel *handle,
+                                 const double *input,
+                                 struct WickraMedianChannelOutput *out,
+                                 uintptr_t n);
 
 uintptr_t wickra_median_channel_warmup_period(struct MedianChannel *handle);
 
@@ -12661,6 +13757,16 @@ bool wickra_modified_ma_stop_update(struct ModifiedMaStop *handle,
                                     int64_t timestamp,
                                     struct WickraModifiedMaStopOutput *out);
 
+void wickra_modified_ma_stop_batch(struct ModifiedMaStop *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   struct WickraModifiedMaStopOutput *out,
+                                   uintptr_t n);
+
 uintptr_t wickra_modified_ma_stop_warmup_period(struct ModifiedMaStop *handle);
 
 bool wickra_modified_ma_stop_is_ready(struct ModifiedMaStop *handle);
@@ -12681,6 +13787,16 @@ bool wickra_murrey_math_lines_update(struct MurreyMathLines *handle,
                                      double volume,
                                      int64_t timestamp,
                                      struct WickraMurreyMathLinesOutput *out);
+
+void wickra_murrey_math_lines_batch(struct MurreyMathLines *handle,
+                                    const double *open,
+                                    const double *high,
+                                    const double *low,
+                                    const double *close,
+                                    const double *volume,
+                                    const int64_t *timestamp,
+                                    struct WickraMurreyMathLinesOutput *out,
+                                    uintptr_t n);
 
 uintptr_t wickra_murrey_math_lines_warmup_period(struct MurreyMathLines *handle);
 
@@ -12703,6 +13819,16 @@ bool wickra_nrtr_update(struct Nrtr *handle,
                         int64_t timestamp,
                         struct WickraNrtrOutput *out);
 
+void wickra_nrtr_batch(struct Nrtr *handle,
+                       const double *open,
+                       const double *high,
+                       const double *low,
+                       const double *close,
+                       const double *volume,
+                       const int64_t *timestamp,
+                       struct WickraNrtrOutput *out,
+                       uintptr_t n);
+
 uintptr_t wickra_nrtr_warmup_period(struct Nrtr *handle);
 
 bool wickra_nrtr_is_ready(struct Nrtr *handle);
@@ -12723,6 +13849,16 @@ bool wickra_opening_range_update(struct OpeningRange *handle,
                                  double volume,
                                  int64_t timestamp,
                                  struct WickraOpeningRangeOutput *out);
+
+void wickra_opening_range_batch(struct OpeningRange *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraOpeningRangeOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_opening_range_warmup_period(struct OpeningRange *handle);
 
@@ -12745,6 +13881,16 @@ bool wickra_overnight_intraday_return_update(struct OvernightIntradayReturn *han
                                              int64_t timestamp,
                                              struct WickraOvernightIntradayReturnOutput *out);
 
+void wickra_overnight_intraday_return_batch(struct OvernightIntradayReturn *handle,
+                                            const double *open,
+                                            const double *high,
+                                            const double *low,
+                                            const double *close,
+                                            const double *volume,
+                                            const int64_t *timestamp,
+                                            struct WickraOvernightIntradayReturnOutput *out,
+                                            uintptr_t n);
+
 uintptr_t wickra_overnight_intraday_return_warmup_period(struct OvernightIntradayReturn *handle);
 
 bool wickra_overnight_intraday_return_is_ready(struct OvernightIntradayReturn *handle);
@@ -12766,6 +13912,16 @@ bool wickra_projection_bands_update(struct ProjectionBands *handle,
                                     int64_t timestamp,
                                     struct WickraProjectionBandsOutput *out);
 
+void wickra_projection_bands_batch(struct ProjectionBands *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   struct WickraProjectionBandsOutput *out,
+                                   uintptr_t n);
+
 uintptr_t wickra_projection_bands_warmup_period(struct ProjectionBands *handle);
 
 bool wickra_projection_bands_is_ready(struct ProjectionBands *handle);
@@ -12779,6 +13935,11 @@ void wickra_projection_bands_free(struct ProjectionBands *handle);
 struct Qqe *wickra_qqe_new(uintptr_t rsi_period, uintptr_t smoothing, double factor);
 
 bool wickra_qqe_update(struct Qqe *handle, double value, struct WickraQqeOutput *out);
+
+void wickra_qqe_batch(struct Qqe *handle,
+                      const double *input,
+                      struct WickraQqeOutput *out,
+                      uintptr_t n);
 
 uintptr_t wickra_qqe_warmup_period(struct Qqe *handle);
 
@@ -12795,6 +13956,11 @@ struct QuartileBands *wickra_quartile_bands_new(uintptr_t period);
 bool wickra_quartile_bands_update(struct QuartileBands *handle,
                                   double value,
                                   struct WickraQuartileBandsOutput *out);
+
+void wickra_quartile_bands_batch(struct QuartileBands *handle,
+                                 const double *input,
+                                 struct WickraQuartileBandsOutput *out,
+                                 uintptr_t n);
 
 uintptr_t wickra_quartile_bands_warmup_period(struct QuartileBands *handle);
 
@@ -12813,6 +13979,12 @@ bool wickra_relative_strength_ab_update(struct RelativeStrengthAB *handle,
                                         double x,
                                         double y,
                                         struct WickraRelativeStrengthOutput *out);
+
+void wickra_relative_strength_ab_batch(struct RelativeStrengthAB *handle,
+                                       const double *x,
+                                       const double *y,
+                                       struct WickraRelativeStrengthOutput *out,
+                                       uintptr_t n);
 
 uintptr_t wickra_relative_strength_ab_warmup_period(struct RelativeStrengthAB *handle);
 
@@ -12835,6 +14007,16 @@ bool wickra_rwi_update(struct Rwi *handle,
                        int64_t timestamp,
                        struct WickraRwiOutput *out);
 
+void wickra_rwi_batch(struct Rwi *handle,
+                      const double *open,
+                      const double *high,
+                      const double *low,
+                      const double *close,
+                      const double *volume,
+                      const int64_t *timestamp,
+                      struct WickraRwiOutput *out,
+                      uintptr_t n);
+
 uintptr_t wickra_rwi_warmup_period(struct Rwi *handle);
 
 bool wickra_rwi_is_ready(struct Rwi *handle);
@@ -12855,6 +14037,16 @@ bool wickra_session_high_low_update(struct SessionHighLow *handle,
                                     double volume,
                                     int64_t timestamp,
                                     struct WickraSessionHighLowOutput *out);
+
+void wickra_session_high_low_batch(struct SessionHighLow *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   struct WickraSessionHighLowOutput *out,
+                                   uintptr_t n);
 
 uintptr_t wickra_session_high_low_warmup_period(struct SessionHighLow *handle);
 
@@ -12877,6 +14069,16 @@ bool wickra_session_range_update(struct SessionRange *handle,
                                  int64_t timestamp,
                                  struct WickraSessionRangeOutput *out);
 
+void wickra_session_range_batch(struct SessionRange *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraSessionRangeOutput *out,
+                                uintptr_t n);
+
 uintptr_t wickra_session_range_warmup_period(struct SessionRange *handle);
 
 bool wickra_session_range_is_ready(struct SessionRange *handle);
@@ -12898,6 +14100,16 @@ bool wickra_smoothed_heikin_ashi_update(struct SmoothedHeikinAshi *handle,
                                         int64_t timestamp,
                                         struct WickraSmoothedHeikinAshiOutput *out);
 
+void wickra_smoothed_heikin_ashi_batch(struct SmoothedHeikinAshi *handle,
+                                       const double *open,
+                                       const double *high,
+                                       const double *low,
+                                       const double *close,
+                                       const double *volume,
+                                       const int64_t *timestamp,
+                                       struct WickraSmoothedHeikinAshiOutput *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_smoothed_heikin_ashi_warmup_period(struct SmoothedHeikinAshi *handle);
 
 bool wickra_smoothed_heikin_ashi_is_ready(struct SmoothedHeikinAshi *handle);
@@ -12915,6 +14127,12 @@ bool wickra_spread_bollinger_bands_update(struct SpreadBollingerBands *handle,
                                           double y,
                                           struct WickraSpreadBollingerBandsOutput *out);
 
+void wickra_spread_bollinger_bands_batch(struct SpreadBollingerBands *handle,
+                                         const double *x,
+                                         const double *y,
+                                         struct WickraSpreadBollingerBandsOutput *out,
+                                         uintptr_t n);
+
 uintptr_t wickra_spread_bollinger_bands_warmup_period(struct SpreadBollingerBands *handle);
 
 bool wickra_spread_bollinger_bands_is_ready(struct SpreadBollingerBands *handle);
@@ -12930,6 +14148,11 @@ struct StandardErrorBands *wickra_standard_error_bands_new(uintptr_t period, dou
 bool wickra_standard_error_bands_update(struct StandardErrorBands *handle,
                                         double value,
                                         struct WickraStandardErrorBandsOutput *out);
+
+void wickra_standard_error_bands_batch(struct StandardErrorBands *handle,
+                                       const double *input,
+                                       struct WickraStandardErrorBandsOutput *out,
+                                       uintptr_t n);
 
 uintptr_t wickra_standard_error_bands_warmup_period(struct StandardErrorBands *handle);
 
@@ -12954,6 +14177,16 @@ bool wickra_starc_bands_update(struct StarcBands *handle,
                                int64_t timestamp,
                                struct WickraStarcBandsOutput *out);
 
+void wickra_starc_bands_batch(struct StarcBands *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraStarcBandsOutput *out,
+                              uintptr_t n);
+
 uintptr_t wickra_starc_bands_warmup_period(struct StarcBands *handle);
 
 bool wickra_starc_bands_is_ready(struct StarcBands *handle);
@@ -12974,6 +14207,16 @@ bool wickra_stochastic_update(struct Stochastic *handle,
                               double volume,
                               int64_t timestamp,
                               struct WickraStochasticOutput *out);
+
+void wickra_stochastic_batch(struct Stochastic *handle,
+                             const double *open,
+                             const double *high,
+                             const double *low,
+                             const double *close,
+                             const double *volume,
+                             const int64_t *timestamp,
+                             struct WickraStochasticOutput *out,
+                             uintptr_t n);
 
 uintptr_t wickra_stochastic_warmup_period(struct Stochastic *handle);
 
@@ -12996,6 +14239,16 @@ bool wickra_super_trend_update(struct SuperTrend *handle,
                                int64_t timestamp,
                                struct WickraSuperTrendOutput *out);
 
+void wickra_super_trend_batch(struct SuperTrend *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraSuperTrendOutput *out,
+                              uintptr_t n);
+
 uintptr_t wickra_super_trend_warmup_period(struct SuperTrend *handle);
 
 bool wickra_super_trend_is_ready(struct SuperTrend *handle);
@@ -13016,6 +14269,16 @@ bool wickra_td_lines_update(struct TdLines *handle,
                             double volume,
                             int64_t timestamp,
                             struct WickraTdLinesOutput *out);
+
+void wickra_td_lines_batch(struct TdLines *handle,
+                           const double *open,
+                           const double *high,
+                           const double *low,
+                           const double *close,
+                           const double *volume,
+                           const int64_t *timestamp,
+                           struct WickraTdLinesOutput *out,
+                           uintptr_t n);
 
 uintptr_t wickra_td_lines_warmup_period(struct TdLines *handle);
 
@@ -13038,6 +14301,16 @@ bool wickra_td_moving_average_update(struct TdMovingAverage *handle,
                                      int64_t timestamp,
                                      struct WickraTdMovingAverageOutput *out);
 
+void wickra_td_moving_average_batch(struct TdMovingAverage *handle,
+                                    const double *open,
+                                    const double *high,
+                                    const double *low,
+                                    const double *close,
+                                    const double *volume,
+                                    const int64_t *timestamp,
+                                    struct WickraTdMovingAverageOutput *out,
+                                    uintptr_t n);
+
 uintptr_t wickra_td_moving_average_warmup_period(struct TdMovingAverage *handle);
 
 bool wickra_td_moving_average_is_ready(struct TdMovingAverage *handle);
@@ -13059,6 +14332,16 @@ bool wickra_td_range_projection_update(struct TdRangeProjection *handle,
                                        int64_t timestamp,
                                        struct WickraTdRangeProjectionOutput *out);
 
+void wickra_td_range_projection_batch(struct TdRangeProjection *handle,
+                                      const double *open,
+                                      const double *high,
+                                      const double *low,
+                                      const double *close,
+                                      const double *volume,
+                                      const int64_t *timestamp,
+                                      struct WickraTdRangeProjectionOutput *out,
+                                      uintptr_t n);
+
 uintptr_t wickra_td_range_projection_warmup_period(struct TdRangeProjection *handle);
 
 bool wickra_td_range_projection_is_ready(struct TdRangeProjection *handle);
@@ -13079,6 +14362,16 @@ bool wickra_td_risk_level_update(struct TdRiskLevel *handle,
                                  double volume,
                                  int64_t timestamp,
                                  struct WickraTdRiskLevelOutput *out);
+
+void wickra_td_risk_level_batch(struct TdRiskLevel *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraTdRiskLevelOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_td_risk_level_warmup_period(struct TdRiskLevel *handle);
 
@@ -13104,6 +14397,16 @@ bool wickra_td_sequential_update(struct TdSequential *handle,
                                  int64_t timestamp,
                                  struct WickraTdSequentialOutput *out);
 
+void wickra_td_sequential_batch(struct TdSequential *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraTdSequentialOutput *out,
+                                uintptr_t n);
+
 uintptr_t wickra_td_sequential_warmup_period(struct TdSequential *handle);
 
 bool wickra_td_sequential_is_ready(struct TdSequential *handle);
@@ -13124,6 +14427,16 @@ bool wickra_ttm_squeeze_update(struct TtmSqueeze *handle,
                                double volume,
                                int64_t timestamp,
                                struct WickraTtmSqueezeOutput *out);
+
+void wickra_ttm_squeeze_batch(struct TtmSqueeze *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraTtmSqueezeOutput *out,
+                              uintptr_t n);
 
 uintptr_t wickra_ttm_squeeze_warmup_period(struct TtmSqueeze *handle);
 
@@ -13148,6 +14461,16 @@ bool wickra_value_area_update(struct ValueArea *handle,
                               int64_t timestamp,
                               struct WickraValueAreaOutput *out);
 
+void wickra_value_area_batch(struct ValueArea *handle,
+                             const double *open,
+                             const double *high,
+                             const double *low,
+                             const double *close,
+                             const double *volume,
+                             const int64_t *timestamp,
+                             struct WickraValueAreaOutput *out,
+                             uintptr_t n);
+
 uintptr_t wickra_value_area_warmup_period(struct ValueArea *handle);
 
 bool wickra_value_area_is_ready(struct ValueArea *handle);
@@ -13168,6 +14491,16 @@ bool wickra_volatility_cone_update(struct VolatilityCone *handle,
                                    double volume,
                                    int64_t timestamp,
                                    struct WickraVolatilityConeOutput *out);
+
+void wickra_volatility_cone_batch(struct VolatilityCone *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  struct WickraVolatilityConeOutput *out,
+                                  uintptr_t n);
 
 uintptr_t wickra_volatility_cone_warmup_period(struct VolatilityCone *handle);
 
@@ -13192,6 +14525,16 @@ bool wickra_volume_weighted_macd_update(struct VolumeWeightedMacd *handle,
                                         int64_t timestamp,
                                         struct WickraVolumeWeightedMacdOutput *out);
 
+void wickra_volume_weighted_macd_batch(struct VolumeWeightedMacd *handle,
+                                       const double *open,
+                                       const double *high,
+                                       const double *low,
+                                       const double *close,
+                                       const double *volume,
+                                       const int64_t *timestamp,
+                                       struct WickraVolumeWeightedMacdOutput *out,
+                                       uintptr_t n);
+
 uintptr_t wickra_volume_weighted_macd_warmup_period(struct VolumeWeightedMacd *handle);
 
 bool wickra_volume_weighted_macd_is_ready(struct VolumeWeightedMacd *handle);
@@ -13212,6 +14555,16 @@ bool wickra_volume_weighted_sr_update(struct VolumeWeightedSr *handle,
                                       double volume,
                                       int64_t timestamp,
                                       struct WickraVolumeWeightedSrOutput *out);
+
+void wickra_volume_weighted_sr_batch(struct VolumeWeightedSr *handle,
+                                     const double *open,
+                                     const double *high,
+                                     const double *low,
+                                     const double *close,
+                                     const double *volume,
+                                     const int64_t *timestamp,
+                                     struct WickraVolumeWeightedSrOutput *out,
+                                     uintptr_t n);
 
 uintptr_t wickra_volume_weighted_sr_warmup_period(struct VolumeWeightedSr *handle);
 
@@ -13234,6 +14587,16 @@ bool wickra_vortex_update(struct Vortex *handle,
                           int64_t timestamp,
                           struct WickraVortexOutput *out);
 
+void wickra_vortex_batch(struct Vortex *handle,
+                         const double *open,
+                         const double *high,
+                         const double *low,
+                         const double *close,
+                         const double *volume,
+                         const int64_t *timestamp,
+                         struct WickraVortexOutput *out,
+                         uintptr_t n);
+
 uintptr_t wickra_vortex_warmup_period(struct Vortex *handle);
 
 bool wickra_vortex_is_ready(struct Vortex *handle);
@@ -13254,6 +14617,16 @@ bool wickra_vwap_std_dev_bands_update(struct VwapStdDevBands *handle,
                                       double volume,
                                       int64_t timestamp,
                                       struct WickraVwapStdDevBandsOutput *out);
+
+void wickra_vwap_std_dev_bands_batch(struct VwapStdDevBands *handle,
+                                     const double *open,
+                                     const double *high,
+                                     const double *low,
+                                     const double *close,
+                                     const double *volume,
+                                     const int64_t *timestamp,
+                                     struct WickraVwapStdDevBandsOutput *out,
+                                     uintptr_t n);
 
 uintptr_t wickra_vwap_std_dev_bands_warmup_period(struct VwapStdDevBands *handle);
 
@@ -13278,6 +14651,16 @@ bool wickra_wave_trend_update(struct WaveTrend *handle,
                               int64_t timestamp,
                               struct WickraWaveTrendOutput *out);
 
+void wickra_wave_trend_batch(struct WaveTrend *handle,
+                             const double *open,
+                             const double *high,
+                             const double *low,
+                             const double *close,
+                             const double *volume,
+                             const int64_t *timestamp,
+                             struct WickraWaveTrendOutput *out,
+                             uintptr_t n);
+
 uintptr_t wickra_wave_trend_warmup_period(struct WaveTrend *handle);
 
 bool wickra_wave_trend_is_ready(struct WaveTrend *handle);
@@ -13298,6 +14681,16 @@ bool wickra_williams_fractals_update(struct WilliamsFractals *handle,
                                      double volume,
                                      int64_t timestamp,
                                      struct WickraWilliamsFractalsOutput *out);
+
+void wickra_williams_fractals_batch(struct WilliamsFractals *handle,
+                                    const double *open,
+                                    const double *high,
+                                    const double *low,
+                                    const double *close,
+                                    const double *volume,
+                                    const int64_t *timestamp,
+                                    struct WickraWilliamsFractalsOutput *out,
+                                    uintptr_t n);
 
 uintptr_t wickra_williams_fractals_warmup_period(struct WilliamsFractals *handle);
 
@@ -13320,6 +14713,16 @@ bool wickra_woodie_pivots_update(struct WoodiePivots *handle,
                                  int64_t timestamp,
                                  struct WickraWoodiePivotsOutput *out);
 
+void wickra_woodie_pivots_batch(struct WoodiePivots *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                struct WickraWoodiePivotsOutput *out,
+                                uintptr_t n);
+
 uintptr_t wickra_woodie_pivots_warmup_period(struct WoodiePivots *handle);
 
 bool wickra_woodie_pivots_is_ready(struct WoodiePivots *handle);
@@ -13335,6 +14738,11 @@ struct ZeroLagMacd *wickra_zero_lag_macd_new(uintptr_t fast, uintptr_t slow, uin
 bool wickra_zero_lag_macd_update(struct ZeroLagMacd *handle,
                                  double value,
                                  struct WickraZeroLagMacdOutput *out);
+
+void wickra_zero_lag_macd_batch(struct ZeroLagMacd *handle,
+                                const double *input,
+                                struct WickraZeroLagMacdOutput *out,
+                                uintptr_t n);
 
 uintptr_t wickra_zero_lag_macd_warmup_period(struct ZeroLagMacd *handle);
 
@@ -13357,6 +14765,16 @@ bool wickra_zig_zag_update(struct ZigZag *handle,
                            int64_t timestamp,
                            struct WickraZigZagOutput *out);
 
+void wickra_zig_zag_batch(struct ZigZag *handle,
+                          const double *open,
+                          const double *high,
+                          const double *low,
+                          const double *close,
+                          const double *volume,
+                          const int64_t *timestamp,
+                          struct WickraZigZagOutput *out,
+                          uintptr_t n);
+
 uintptr_t wickra_zig_zag_warmup_period(struct ZigZag *handle);
 
 bool wickra_zig_zag_is_ready(struct ZigZag *handle);
@@ -13378,6 +14796,19 @@ intptr_t wickra_day_of_week_profile_update(struct DayOfWeekProfile *handle,
                                            int64_t timestamp,
                                            double *values,
                                            uintptr_t cap);
+
+uintptr_t wickra_day_of_week_profile_width(struct DayOfWeekProfile *handle);
+
+void wickra_day_of_week_profile_batch(struct DayOfWeekProfile *handle,
+                                      const double *open,
+                                      const double *high,
+                                      const double *low,
+                                      const double *close,
+                                      const double *volume,
+                                      const int64_t *timestamp,
+                                      double *values,
+                                      uintptr_t width,
+                                      uintptr_t n);
 
 uintptr_t wickra_day_of_week_profile_warmup_period(struct DayOfWeekProfile *handle);
 
@@ -13402,6 +14833,19 @@ intptr_t wickra_intraday_volatility_profile_update(struct IntradayVolatilityProf
                                                    double *values,
                                                    uintptr_t cap);
 
+uintptr_t wickra_intraday_volatility_profile_width(struct IntradayVolatilityProfile *handle);
+
+void wickra_intraday_volatility_profile_batch(struct IntradayVolatilityProfile *handle,
+                                              const double *open,
+                                              const double *high,
+                                              const double *low,
+                                              const double *close,
+                                              const double *volume,
+                                              const int64_t *timestamp,
+                                              double *values,
+                                              uintptr_t width,
+                                              uintptr_t n);
+
 uintptr_t wickra_intraday_volatility_profile_warmup_period(struct IntradayVolatilityProfile *handle);
 
 bool wickra_intraday_volatility_profile_is_ready(struct IntradayVolatilityProfile *handle);
@@ -13424,6 +14868,19 @@ intptr_t wickra_time_of_day_return_profile_update(struct TimeOfDayReturnProfile 
                                                   int64_t timestamp,
                                                   double *values,
                                                   uintptr_t cap);
+
+uintptr_t wickra_time_of_day_return_profile_width(struct TimeOfDayReturnProfile *handle);
+
+void wickra_time_of_day_return_profile_batch(struct TimeOfDayReturnProfile *handle,
+                                             const double *open,
+                                             const double *high,
+                                             const double *low,
+                                             const double *close,
+                                             const double *volume,
+                                             const int64_t *timestamp,
+                                             double *values,
+                                             uintptr_t width,
+                                             uintptr_t n);
 
 uintptr_t wickra_time_of_day_return_profile_warmup_period(struct TimeOfDayReturnProfile *handle);
 
@@ -13448,6 +14905,20 @@ intptr_t wickra_tpo_profile_update(struct TpoProfile *handle,
                                    double *values,
                                    uintptr_t cap);
 
+uintptr_t wickra_tpo_profile_width(struct TpoProfile *handle);
+
+void wickra_tpo_profile_batch(struct TpoProfile *handle,
+                              const double *open,
+                              const double *high,
+                              const double *low,
+                              const double *close,
+                              const double *volume,
+                              const int64_t *timestamp,
+                              struct WickraTpoProfileOutputScalars *scalars,
+                              double *values,
+                              uintptr_t width,
+                              uintptr_t n);
+
 uintptr_t wickra_tpo_profile_warmup_period(struct TpoProfile *handle);
 
 bool wickra_tpo_profile_is_ready(struct TpoProfile *handle);
@@ -13470,6 +14941,19 @@ intptr_t wickra_volume_by_time_profile_update(struct VolumeByTimeProfile *handle
                                               int64_t timestamp,
                                               double *values,
                                               uintptr_t cap);
+
+uintptr_t wickra_volume_by_time_profile_width(struct VolumeByTimeProfile *handle);
+
+void wickra_volume_by_time_profile_batch(struct VolumeByTimeProfile *handle,
+                                         const double *open,
+                                         const double *high,
+                                         const double *low,
+                                         const double *close,
+                                         const double *volume,
+                                         const int64_t *timestamp,
+                                         double *values,
+                                         uintptr_t width,
+                                         uintptr_t n);
 
 uintptr_t wickra_volume_by_time_profile_warmup_period(struct VolumeByTimeProfile *handle);
 
@@ -13494,6 +14978,20 @@ intptr_t wickra_volume_profile_update(struct VolumeProfile *handle,
                                       double *values,
                                       uintptr_t cap);
 
+uintptr_t wickra_volume_profile_width(struct VolumeProfile *handle);
+
+void wickra_volume_profile_batch(struct VolumeProfile *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 struct WickraVolumeProfileOutputScalars *scalars,
+                                 double *values,
+                                 uintptr_t width,
+                                 uintptr_t n);
+
 uintptr_t wickra_volume_profile_warmup_period(struct VolumeProfile *handle);
 
 bool wickra_volume_profile_is_ready(struct VolumeProfile *handle);
@@ -13516,6 +15014,19 @@ uintptr_t wickra_dollar_bars_update(struct DollarBars *handle,
                                     struct WickraDollarBar *out,
                                     uintptr_t cap);
 
+uintptr_t wickra_dollar_bars_drain(struct DollarBars *handle,
+                                   struct WickraDollarBar *out,
+                                   uintptr_t cap);
+
+uintptr_t wickra_dollar_bars_batch(struct DollarBars *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   uintptr_t n);
+
 const char *wickra_dollar_bars_name(struct DollarBars *handle);
 
 void wickra_dollar_bars_reset(struct DollarBars *handle);
@@ -13533,6 +15044,19 @@ uintptr_t wickra_imbalance_bars_update(struct ImbalanceBars *handle,
                                        int64_t timestamp,
                                        struct WickraImbalanceBar *out,
                                        uintptr_t cap);
+
+uintptr_t wickra_imbalance_bars_drain(struct ImbalanceBars *handle,
+                                      struct WickraImbalanceBar *out,
+                                      uintptr_t cap);
+
+uintptr_t wickra_imbalance_bars_batch(struct ImbalanceBars *handle,
+                                      const double *open,
+                                      const double *high,
+                                      const double *low,
+                                      const double *close,
+                                      const double *volume,
+                                      const int64_t *timestamp,
+                                      uintptr_t n);
 
 const char *wickra_imbalance_bars_name(struct ImbalanceBars *handle);
 
@@ -13552,6 +15076,17 @@ uintptr_t wickra_kagi_bars_update(struct KagiBars *handle,
                                   struct WickraKagiBar *out,
                                   uintptr_t cap);
 
+uintptr_t wickra_kagi_bars_drain(struct KagiBars *handle, struct WickraKagiBar *out, uintptr_t cap);
+
+uintptr_t wickra_kagi_bars_batch(struct KagiBars *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 uintptr_t n);
+
 const char *wickra_kagi_bars_name(struct KagiBars *handle);
 
 void wickra_kagi_bars_reset(struct KagiBars *handle);
@@ -13569,6 +15104,19 @@ uintptr_t wickra_point_and_figure_bars_update(struct PointAndFigureBars *handle,
                                               int64_t timestamp,
                                               struct WickraPnfColumn *out,
                                               uintptr_t cap);
+
+uintptr_t wickra_point_and_figure_bars_drain(struct PointAndFigureBars *handle,
+                                             struct WickraPnfColumn *out,
+                                             uintptr_t cap);
+
+uintptr_t wickra_point_and_figure_bars_batch(struct PointAndFigureBars *handle,
+                                             const double *open,
+                                             const double *high,
+                                             const double *low,
+                                             const double *close,
+                                             const double *volume,
+                                             const int64_t *timestamp,
+                                             uintptr_t n);
 
 const char *wickra_point_and_figure_bars_name(struct PointAndFigureBars *handle);
 
@@ -13588,6 +15136,19 @@ uintptr_t wickra_range_bars_update(struct RangeBars *handle,
                                    struct WickraRangeBar *out,
                                    uintptr_t cap);
 
+uintptr_t wickra_range_bars_drain(struct RangeBars *handle,
+                                  struct WickraRangeBar *out,
+                                  uintptr_t cap);
+
+uintptr_t wickra_range_bars_batch(struct RangeBars *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  uintptr_t n);
+
 const char *wickra_range_bars_name(struct RangeBars *handle);
 
 void wickra_range_bars_reset(struct RangeBars *handle);
@@ -13605,6 +15166,19 @@ uintptr_t wickra_renko_bars_update(struct RenkoBars *handle,
                                    int64_t timestamp,
                                    struct WickraRenkoBrick *out,
                                    uintptr_t cap);
+
+uintptr_t wickra_renko_bars_drain(struct RenkoBars *handle,
+                                  struct WickraRenkoBrick *out,
+                                  uintptr_t cap);
+
+uintptr_t wickra_renko_bars_batch(struct RenkoBars *handle,
+                                  const double *open,
+                                  const double *high,
+                                  const double *low,
+                                  const double *close,
+                                  const double *volume,
+                                  const int64_t *timestamp,
+                                  uintptr_t n);
 
 const char *wickra_renko_bars_name(struct RenkoBars *handle);
 
@@ -13624,6 +15198,17 @@ uintptr_t wickra_run_bars_update(struct RunBars *handle,
                                  struct WickraRunBar *out,
                                  uintptr_t cap);
 
+uintptr_t wickra_run_bars_drain(struct RunBars *handle, struct WickraRunBar *out, uintptr_t cap);
+
+uintptr_t wickra_run_bars_batch(struct RunBars *handle,
+                                const double *open,
+                                const double *high,
+                                const double *low,
+                                const double *close,
+                                const double *volume,
+                                const int64_t *timestamp,
+                                uintptr_t n);
+
 const char *wickra_run_bars_name(struct RunBars *handle);
 
 void wickra_run_bars_reset(struct RunBars *handle);
@@ -13641,6 +15226,19 @@ uintptr_t wickra_three_line_break_bars_update(struct ThreeLineBreakBars *handle,
                                               int64_t timestamp,
                                               struct WickraLineBreakBar *out,
                                               uintptr_t cap);
+
+uintptr_t wickra_three_line_break_bars_drain(struct ThreeLineBreakBars *handle,
+                                             struct WickraLineBreakBar *out,
+                                             uintptr_t cap);
+
+uintptr_t wickra_three_line_break_bars_batch(struct ThreeLineBreakBars *handle,
+                                             const double *open,
+                                             const double *high,
+                                             const double *low,
+                                             const double *close,
+                                             const double *volume,
+                                             const int64_t *timestamp,
+                                             uintptr_t n);
 
 const char *wickra_three_line_break_bars_name(struct ThreeLineBreakBars *handle);
 
@@ -13660,6 +15258,17 @@ uintptr_t wickra_tick_bars_update(struct TickBars *handle,
                                   struct WickraTickBar *out,
                                   uintptr_t cap);
 
+uintptr_t wickra_tick_bars_drain(struct TickBars *handle, struct WickraTickBar *out, uintptr_t cap);
+
+uintptr_t wickra_tick_bars_batch(struct TickBars *handle,
+                                 const double *open,
+                                 const double *high,
+                                 const double *low,
+                                 const double *close,
+                                 const double *volume,
+                                 const int64_t *timestamp,
+                                 uintptr_t n);
+
 const char *wickra_tick_bars_name(struct TickBars *handle);
 
 void wickra_tick_bars_reset(struct TickBars *handle);
@@ -13678,6 +15287,19 @@ uintptr_t wickra_volume_bars_update(struct VolumeBars *handle,
                                     struct WickraVolumeBar *out,
                                     uintptr_t cap);
 
+uintptr_t wickra_volume_bars_drain(struct VolumeBars *handle,
+                                   struct WickraVolumeBar *out,
+                                   uintptr_t cap);
+
+uintptr_t wickra_volume_bars_batch(struct VolumeBars *handle,
+                                   const double *open,
+                                   const double *high,
+                                   const double *low,
+                                   const double *close,
+                                   const double *volume,
+                                   const int64_t *timestamp,
+                                   uintptr_t n);
+
 const char *wickra_volume_bars_name(struct VolumeBars *handle);
 
 void wickra_volume_bars_reset(struct VolumeBars *handle);
@@ -13692,6 +15314,11 @@ struct MacdExt *wickra_macd_ext_new(uintptr_t fast,
                                     uint8_t signal_type);
 
 bool wickra_macd_ext_update(struct MacdExt *handle, double value, struct WickraMacdOutput *out);
+
+void wickra_macd_ext_batch(struct MacdExt *handle,
+                           const double *input,
+                           struct WickraMacdOutput *out,
+                           uintptr_t n);
 
 uintptr_t wickra_macd_ext_warmup_period(struct MacdExt *handle);
 
@@ -13712,6 +15339,17 @@ intptr_t wickra_footprint_update(struct Footprint *handle,
                                  int64_t timestamp,
                                  struct WickraFootprintLevel *out,
                                  uintptr_t cap);
+
+uintptr_t wickra_footprint_drain(struct Footprint *handle,
+                                 struct WickraFootprintLevel *out,
+                                 uintptr_t cap);
+
+uintptr_t wickra_footprint_batch(struct Footprint *handle,
+                                 const double *price,
+                                 const double *size,
+                                 const bool *is_buy,
+                                 const int64_t *timestamp,
+                                 uintptr_t n);
 
 uintptr_t wickra_footprint_warmup_period(struct Footprint *handle);
 
@@ -13736,16 +15374,17 @@ intptr_t wickra_tick_aggregator_drain(struct TickAggregator *handle,
 
 void wickra_tick_aggregator_free(struct TickAggregator *handle);
 
-struct Resampler *wickra_resampler_new(int64_t timeframe);
+struct Resampler *wickra_resampler_new(int64_t timeframe, bool gap_fill);
 
-bool wickra_resampler_update(struct Resampler *handle,
-                             double open,
-                             double high,
-                             double low,
-                             double close,
-                             double volume,
-                             int64_t timestamp,
-                             struct WickraCandle *out);
+intptr_t wickra_resampler_push(struct Resampler *handle,
+                               double open,
+                               double high,
+                               double low,
+                               double close,
+                               double volume,
+                               int64_t timestamp);
+
+intptr_t wickra_resampler_drain(struct Resampler *handle, struct WickraCandle *out, uintptr_t cap);
 
 bool wickra_resampler_flush(struct Resampler *handle, struct WickraCandle *out);
 
