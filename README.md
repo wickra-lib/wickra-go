@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://wickra.org"><img src="https://raw.githubusercontent.com/wickra-lib/.github/main/profile/wickra-banner.webp?v=514-7" alt="Wickra — streaming-first technical indicators" width="100%"></a>
+  <a href="https://wickra.org"><img src="https://raw.githubusercontent.com/wickra-lib/.github/main/profile/wickra-banner.svg?v=514-8" alt="Wickra — streaming-first technical indicators" width="100%"></a>
 </p>
 
 [![CI](https://raw.githubusercontent.com/wickra-lib/.github/main/profile/badges/wickra/ci.svg)](https://github.com/wickra-lib/wickra/actions/workflows/ci.yml)
@@ -95,6 +95,31 @@ values — the equivalence is enforced by the test suite. Multi-output indicator
 (MACD, Bollinger, ADX, …) return `(Output, bool)`, with `false` while warming up.
 Every indicator owns a native handle freed by `Close()`; a finalizer is wired as
 a backstop, but call `Close()` (e.g. with `defer`) to release memory promptly.
+
+### Reusing a buffer, and the opt-in fast batch
+
+Every single-output `Batch` has a `BatchInto(dst, ...)` form that writes into a
+caller slice (destination first, as `copy` does) and allocates nothing, and a
+`BatchFast` / `BatchFastInto` twin:
+
+```go
+out := make([]float64, len(prices))
+exact, _ := wickra.NewSma(20)
+defer exact.Close()
+exact.BatchInto(out, prices) // the same bits as a fresh Sma's Batch(prices)
+
+fast, _ := wickra.NewEma(20)
+defer fast.Close()
+fast.BatchFastInto(out, prices) // or: values := fast.BatchFast(prices)
+```
+
+`BatchFast` runs a SIMD kernel where the indicator has one (moving averages,
+RSI, ATR, MACD, Bollinger, Chaikin, skewness, Pearson and more). The kernel
+reassociates the arithmetic, so each value agrees with `Batch` to within a few
+units in the last place rather than bit for bit; NaN placement and length are
+identical, and the result is the same on every platform. Where there is no
+kernel, `BatchFast` is `Batch` exactly. An indicator keeps its state across
+calls, so a second batch on the same instance continues the series.
 
 ## Benchmark
 
