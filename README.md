@@ -4,7 +4,7 @@
 
 [![CI](https://raw.githubusercontent.com/wickra-lib/.github/main/profile/badges/wickra/ci.svg)](https://github.com/wickra-lib/wickra/actions/workflows/ci.yml)
 [![codecov](https://raw.githubusercontent.com/wickra-lib/.github/main/profile/badges/wickra/codecov.svg)](https://codecov.io/gh/wickra-lib/wickra)
-[![Go module](https://raw.githubusercontent.com/wickra-lib/.github/main/profile/badges/wickra/go.svg)](https://pkg.go.dev/github.com/wickra-lib/wickra-go)
+[![Go module](https://raw.githubusercontent.com/wickra-lib/.github/main/profile/badges/wickra/go.svg)](https://pkg.go.dev/github.com/wickra-lib/wickra-go/v2)
 [![License: MIT OR Apache-2.0](https://raw.githubusercontent.com/wickra-lib/.github/main/profile/badges/wickra/license.svg)](https://github.com/wickra-lib/wickra#license)
 
 # Wickra — Go
@@ -29,12 +29,15 @@ library for every platform, so `go get` + `go build` works with no extra steps
 (a C compiler is still required, as the binding uses cgo):
 
 ```bash
-go get github.com/wickra-lib/wickra-go
+go get github.com/wickra-lib/wickra-go/v2
 ```
 
 ```go
-import wickra "github.com/wickra-lib/wickra-go"
+import wickra "github.com/wickra-lib/wickra-go/v2"
 ```
+
+From 2.0 the module path carries the major version (`/v2`), as Go's semantic
+import versioning requires; 1.x stays at the bare path.
 
 `wickra-go` is generated from this directory by the release pipeline: it mirrors
 the Go sources, the vendored C ABI header (`include/wickra.h`) and the prebuilt
@@ -64,7 +67,7 @@ package main
 import (
 	"fmt"
 
-	wickra "github.com/wickra-lib/wickra-go"
+	wickra "github.com/wickra-lib/wickra-go/v2"
 )
 
 func main() {
